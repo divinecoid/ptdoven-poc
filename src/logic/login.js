@@ -61,19 +61,19 @@ class LoginManager {
         // Simulate login process
         this.showSuccess('Logging in...');
         
-        // Simulate API call delay
-        setTimeout(() => {
-            // Hardcoded credentials for POC: admin/admin
-            if (username === 'admin' && password === 'admin') {
-                this.showSuccess('Login successful! Redirecting...');
-                // Here you would typically redirect to the main application
+                        // Simulate API call delay
                 setTimeout(() => {
-                    alert('Welcome to PT Doven Tradeco!');
-                }, 1000);
-            } else {
-                this.showError('Invalid credentials. Please use admin/admin for POC.');
-            }
-        }, 1500);
+                    // Hardcoded credentials for POC: admin/admin
+                    if (username === 'admin' && password === 'admin') {
+                        this.showSuccess('Login successful! Redirecting...');
+                        // Redirect to dashboard after successful login
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1000);
+                    } else {
+                        this.showError('Invalid credentials. Please use admin/admin for POC.');
+                    }
+                }, 1500);
     }
 
     setupInteractiveEffects() {
