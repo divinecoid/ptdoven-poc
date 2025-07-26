@@ -12,6 +12,11 @@ class InvoiceManager {
     }
 
     init() {
+        // Check authentication first
+        if (!this.checkAuthentication()) {
+            return; // Stop initialization if not authenticated
+        }
+        
         this.setupEventListeners();
         this.renderInvoices();
         this.updatePagination();
@@ -138,12 +143,22 @@ class InvoiceManager {
         if (exportDateFrom) {
             exportDateFrom.addEventListener('change', () => {
                 this.updateExportSummary();
+                this.validateDateRange();
+            });
+            // Auto-show date picker on click
+            exportDateFrom.addEventListener('click', () => {
+                exportDateFrom.showPicker();
             });
         }
 
         if (exportDateTo) {
             exportDateTo.addEventListener('change', () => {
                 this.updateExportSummary();
+                this.validateDateRange();
+            });
+            // Auto-show date picker on click
+            exportDateTo.addEventListener('click', () => {
+                exportDateTo.showPicker();
             });
         }
 
@@ -188,9 +203,26 @@ class InvoiceManager {
                 <td>${this.formatDate(invoice.dueDate)}</td>
                 <td><span class="status-badge status-${invoice.status}">${invoice.status}</span></td>
                 <td>
-                    <button class="action-btn" onclick="invoiceManager.viewInvoice(${invoice.id})">👁️</button>
-                    <button class="action-btn" onclick="invoiceManager.editInvoice(${invoice.id})">✏️</button>
-                    <button class="action-btn" onclick="invoiceManager.deleteInvoice(${invoice.id})">🗑️</button>
+                    <button class="action-btn view-btn" onclick="invoiceManager.viewInvoice(${invoice.id})" title="View Invoice">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                    <button class="action-btn edit-btn" onclick="invoiceManager.editInvoice(${invoice.id})" title="Edit Invoice">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="invoiceManager.deleteInvoice(${invoice.id})" title="Delete Invoice">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3,6 5,6 21,6"></polyline>
+                            <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </button>
                 </td>
             </tr>
         `).join('');
@@ -281,12 +313,12 @@ class InvoiceManager {
                                validExtensions.includes(fileExtensionUpper);
 
             if (!isValidType) {
-                alert(`Invalid file type: ${file.name}. Please select PDF or EDI files only.`);
+                this.showCustomAlert('Invalid File Type', `Invalid file type: ${file.name}. Please select PDF or EDI files only.`, '❌');
                 return false;
             }
 
             if (file.size > maxSize) {
-                alert(`File too large: ${file.name}. Maximum size is 10MB.`);
+                this.showCustomAlert('File Too Large', `File too large: ${file.name}. Maximum size is 10MB.`, '⚠️');
                 return false;
             }
 
@@ -483,9 +515,169 @@ class InvoiceManager {
     }
 
     // Logout functionality
-    logout() {
-        if (confirm('Are you sure you want to logout?')) {
+    async logout() {
+        console.log('Invoices logout method called');
+        
+        try {
+            console.log('About to show custom confirmation dialog...');
+            // Show custom confirmation dialog
+            const confirmed = await this.showCustomConfirm(
+                'Logout Confirmation',
+                'Are you sure you want to logout?\n\nYou will be redirected to the login page.',
+                '🚪'
+            );
+            
+            console.log('Confirmation result received:', confirmed);
+            console.log('Confirmation result type:', typeof confirmed);
+            
+            if (confirmed) {
+                console.log('User confirmed logout, proceeding...');
+                // Clear any stored session data
+                this.clearSessionData();
+                
+                // Show logout message
+                this.showSnackbar('Logging out...', 2000, '👋');
+                
+                // Redirect after a short delay to show the message
+                setTimeout(() => {
+                    console.log('Redirecting to login page...');
+                    // Redirect to login page
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                console.log('User cancelled logout');
+            }
+        } catch (error) {
+            console.error('Error with custom modal, using fallback:', error);
+            // Fallback to browser confirm
+            const confirmed = confirm('Are you sure you want to logout?\n\nYou will be redirected to the login page.');
+            if (confirmed) {
+                this.clearSessionData();
+                this.showSnackbar('Logging out...', 2000, '👋');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            }
+        }
+    }
+
+    clearSessionData() {
+        // Clear any stored data (localStorage, sessionStorage, etc.)
+        try {
+            // Clear authentication data
+            localStorage.removeItem('userSession');
+            localStorage.removeItem('userData');
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('currentUser');
+            
+            // Clear session storage
+            sessionStorage.clear();
+            
+            // Clear any cookies if they exist
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            console.log('Session data cleared successfully');
+        } catch (error) {
+            console.log('Session cleanup completed');
+        }
+    }
+
+    // Check if user is authenticated
+    checkAuthentication() {
+        const isAuthenticated = localStorage.getItem('isAuthenticated');
+        const currentUser = localStorage.getItem('currentUser');
+        
+        if (!isAuthenticated || !currentUser) {
+            // Redirect to login if not authenticated
             window.location.href = 'index.html';
+            return false;
+        }
+        return true;
+    }
+
+    // Custom Modal System
+    showCustomModal(title, message, icon = '❓', type = 'confirm') {
+        const modalOverlay = document.getElementById('customModalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalIcon = document.getElementById('modalIcon');
+        const modalActions = document.getElementById('modalActions');
+
+        if (modalOverlay && modalTitle && modalMessage && modalIcon && modalActions) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalIcon.textContent = icon;
+
+            // Configure actions based on type
+            if (type === 'alert') {
+                modalActions.innerHTML = '<button class="btn btn-primary" onclick="closeCustomModal()">OK</button>';
+            } else {
+                modalActions.innerHTML = `
+                    <button class="btn btn-secondary" onclick="closeCustomModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmCustomModal()">Confirm</button>
+                `;
+            }
+
+            modalOverlay.classList.add('show');
+            
+            // Store modal type (callback will be set by showCustomConfirm)
+            this.modalType = type;
+        }
+    }
+
+    showCustomConfirm(title, message, icon = '❓') {
+        console.log('Invoices showCustomConfirm called, creating promise...');
+        return new Promise((resolve) => {
+            console.log('Storing modal callback...');
+            this.modalCallback = resolve;
+            console.log('Modal callback stored:', !!this.modalCallback);
+            this.showCustomModal(title, message, icon, 'confirm');
+        });
+    }
+
+    showCustomAlert(title, message, icon = 'ℹ️') {
+        this.showCustomModal(title, message, icon, 'alert');
+    }
+
+    closeCustomModal() {
+        console.log('Invoices closeCustomModal method called');
+        console.log('Current modal callback:', !!this.modalCallback);
+        
+        const modalOverlay = document.getElementById('customModalOverlay');
+        if (modalOverlay) {
+            modalOverlay.classList.remove('show');
+        }
+        
+        // Resolve with false for cancel
+        if (this.modalCallback) {
+            console.log('Resolving modal with false (cancel)');
+            this.modalCallback(false);
+            this.modalCallback = null;
+            console.log('Modal callback cleared');
+        } else {
+            console.log('No modal callback found for close');
+        }
+    }
+
+    confirmCustomModal() {
+        console.log('Invoices confirmCustomModal method called');
+        console.log('Current modal callback:', !!this.modalCallback);
+        
+        const modalOverlay = document.getElementById('customModalOverlay');
+        if (modalOverlay) {
+            modalOverlay.classList.remove('show');
+        }
+        
+        // Resolve with true for confirm
+        if (this.modalCallback) {
+            console.log('Resolving modal with true (confirm)');
+            this.modalCallback(true);
+            this.modalCallback = null;
+            console.log('Modal callback cleared');
+        } else {
+            console.log('No modal callback found for confirm');
         }
     }
 
@@ -524,10 +716,56 @@ class InvoiceManager {
         }
     }
 
+    validateDateRange() {
+        const dateFrom = document.getElementById('exportDateFrom')?.value;
+        const dateTo = document.getElementById('exportDateTo')?.value;
+        const dateError = document.getElementById('dateError');
+        const exportXMLBtn = document.getElementById('exportXMLBtn');
+        const dateToInput = document.getElementById('exportDateTo');
+
+        // Clear previous error state
+        if (dateError) {
+            dateError.style.display = 'none';
+        }
+        if (dateToInput) {
+            dateToInput.classList.remove('error');
+        }
+
+        // Only validate if both dates are selected
+        if (dateFrom && dateTo) {
+            if (dateTo <= dateFrom) {
+                // Show error
+                if (dateError) {
+                    dateError.style.display = 'block';
+                }
+                if (dateToInput) {
+                    dateToInput.classList.add('error');
+                }
+                if (exportXMLBtn) {
+                    exportXMLBtn.disabled = true;
+                }
+                return false;
+            }
+        }
+
+        // Re-enable export button if validation passes
+        if (exportXMLBtn) {
+            const filteredInvoices = this.getFilteredInvoicesForExport();
+            exportXMLBtn.disabled = filteredInvoices.length === 0;
+        }
+
+        return true;
+    }
+
     getFilteredInvoicesForExport() {
         const dateFrom = document.getElementById('exportDateFrom')?.value;
         const dateTo = document.getElementById('exportDateTo')?.value;
         const statusFilter = document.getElementById('exportStatusFilter')?.value;
+
+        // Return empty array if date validation fails
+        if (dateFrom && dateTo && dateTo <= dateFrom) {
+            return [];
+        }
 
         return this.invoices.filter(invoice => {
             // Date range filter
@@ -631,15 +869,17 @@ class InvoiceManager {
         window.URL.revokeObjectURL(url);
         
         // Show success snackbar
-        this.showSnackbar('DJP XML file exported successfully! 📄');
+        this.showSnackbar('DJP XML file exported successfully!', 4000, '📄');
     }
 
-    showSnackbar(message, duration = 4000) {
+    showSnackbar(message, duration = 4000, icon = '✅') {
         const snackbar = document.getElementById('snackbar');
         const snackbarMessage = document.getElementById('snackbarMessage');
+        const snackbarIcon = document.getElementById('snackbarIcon');
         
-        if (snackbar && snackbarMessage) {
+        if (snackbar && snackbarMessage && snackbarIcon) {
             snackbarMessage.textContent = message;
+            snackbarIcon.textContent = icon;
             snackbar.classList.add('show');
             
             // Auto-hide after duration
@@ -718,6 +958,24 @@ function closeSnackbar() {
     }
 }
 
+function closeCustomModal() {
+    console.log('Global closeCustomModal called');
+    if (invoiceManager) {
+        invoiceManager.closeCustomModal();
+    } else {
+        console.error('invoiceManager not found!');
+    }
+}
+
+function confirmCustomModal() {
+    console.log('Global confirmCustomModal called');
+    if (invoiceManager) {
+        invoiceManager.confirmCustomModal();
+    } else {
+        console.error('invoiceManager not found!');
+    }
+}
+
 function changePage(direction) {
     if (invoiceManager) {
         invoiceManager.changePage(direction);
@@ -725,12 +983,15 @@ function changePage(direction) {
 }
 
 function logout() {
+    console.log('Global logout function called');
     if (invoiceManager) {
         invoiceManager.logout();
+    } else {
+        console.error('invoiceManager not found!');
     }
 }
 
 // Export for potential use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = InvoiceManager;
-} 
+}
