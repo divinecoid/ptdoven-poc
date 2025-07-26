@@ -11,9 +11,22 @@ class LoginManager {
     }
 
     init() {
+        // Check if user is already logged in
+        this.checkExistingSession();
+        
         this.setupPasswordToggle();
         this.setupFormSubmission();
         this.setupInteractiveEffects();
+    }
+
+    checkExistingSession() {
+        const isAuthenticated = localStorage.getItem('isAuthenticated');
+        const currentUser = localStorage.getItem('currentUser');
+        
+        if (isAuthenticated && currentUser) {
+            // User is already logged in, redirect to dashboard
+            window.location.href = 'dashboard.html';
+        }
     }
 
     setupPasswordToggle() {
@@ -61,19 +74,43 @@ class LoginManager {
         // Simulate login process
         this.showSuccess('Logging in...');
         
-                        // Simulate API call delay
+        // Simulate API call delay
+        setTimeout(() => {
+            // Hardcoded credentials for POC: admin/admin
+            if (username === 'admin' && password === 'admin') {
+                // Set authentication data
+                this.setAuthenticationData(username);
+                
+                this.showSuccess('Login successful! Redirecting...');
+                // Redirect to dashboard after successful login
                 setTimeout(() => {
-                    // Hardcoded credentials for POC: admin/admin
-                    if (username === 'admin' && password === 'admin') {
-                        this.showSuccess('Login successful! Redirecting...');
-                        // Redirect to dashboard after successful login
-                        setTimeout(() => {
-                            window.location.href = 'dashboard.html';
-                        }, 1000);
-                    } else {
-                        this.showError('Invalid credentials. Please use admin/admin for POC.');
-                    }
-                }, 1500);
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                this.showError('Invalid credentials. Please use admin/admin for POC.');
+            }
+        }, 1500);
+    }
+
+    setAuthenticationData(username) {
+        try {
+            // Set authentication flags
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.setItem('currentUser', username);
+            localStorage.setItem('userSession', JSON.stringify({
+                username: username,
+                loginTime: new Date().toISOString(),
+                sessionId: this.generateSessionId()
+            }));
+            
+            console.log('Authentication data set successfully');
+        } catch (error) {
+            console.error('Error setting authentication data:', error);
+        }
+    }
+
+    generateSessionId() {
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
     setupInteractiveEffects() {
