@@ -20,5 +20,8 @@
   "homepage": "https://github.com/divinecoid/ptdoven-poc#readme",
   "devDependencies": {
     "electron": "^37.2.4"
+  },
+  "dependencies": {
+    "@google/genai": "^1.12.0"
   }
 }

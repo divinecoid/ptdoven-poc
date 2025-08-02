@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PT Doven Tradeco - Bank Upload</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
+            height: 100vh;
+            overflow: hidden;
+            color: #333;
+        }
+        .dashboard-container { display: flex; height: 100vh; overflow: hidden; }
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .logo-section { text-align: center; padding: 20px 0; border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom: 30px; }
+        .logo-section h2 { color: white; font-size: 20px; font-weight: 600; }
+        .logo-section p { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 5px; }
+        .nav-menu { list-style: none; }
+        .nav-menu li { margin-bottom: 10px; }
+        .nav-menu a {
+            display: flex; align-items: center; padding: 12px 15px;
+            color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 10px; transition: all 0.3s ease;
+        }
+        .nav-menu a:hover, .nav-menu a.active { background: rgba(255,255,255,0.2); color: white; }
+        .nav-menu a i { margin-right: 12px; font-size: 18px; }
+        .main-content {
+            flex: 1; margin-left: 280px; padding: 30px; overflow-y: auto; max-height: 100vh;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { color: white; font-size: 28px; font-weight: 600; }
+        .user-info { display: flex; align-items: center; color: white; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: 600; }
+        .upload-section { margin-bottom: 30px; }
+        .upload-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .upload-btn {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            border: none; color: white; padding: 12px 24px; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(42,82,152,0.4);
+            white-space: nowrap;
+        }
+        .upload-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(42,82,152,0.6); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            padding: 10px 24px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600;
+            background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: all 0.2s;
+        }
+        .tab-btn.active, .tab-btn:hover { background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%); color: #fff; }
+        .tab-content { background: rgba(0,0,0,0.4); border-radius: 15px; padding: 25px; color: white; }
+        .file-table, .mutasi-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .file-table th, .file-table td, .mutasi-table th, .mutasi-table td {
+            padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;
+        }
+        .file-table th, .mutasi-table th { font-weight: 600; color: rgba(255,255,255,0.8); font-size: 13px; }
+        .file-table tr:hover, .mutasi-table tr:hover { background: rgba(255,255,255,0.05); }
+        .detail-btn { 
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            padding: 8px 16px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(42, 82, 152, 0.3);
+        }
+        .detail-btn:hover { 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(42, 82, 152, 0.4);
+        }
+        .detail-btn.active {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        .amount-cr { color: #4ade80; font-weight: 600; }
+        .amount-db { color: #f87171; font-weight: 600; }
+        .status-draft { color: #9ca3af; font-weight: 600; }
+        .status-confirmed { color: #4ade80; font-weight: 600; }
+        .status-reject { color: #f87171; font-weight: 600; }
+        .status-edited { color: #fbbf24; font-weight: 600; }
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 2px;
+            transition: all 0.3s ease;
+        }
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .action-btn.confirm { background: rgba(76, 175, 80, 0.2); border-color: rgba(76, 175, 80, 0.3); }
+        .action-btn.confirm:hover { background: rgba(76, 175, 80, 0.3); }
+        .action-btn.reject { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); }
+        .action-btn.reject:hover { background: rgba(239, 68, 68, 0.3); }
+        .action-btn.edit { background: rgba(251, 191, 36, 0.2); border-color: rgba(251, 191, 36, 0.3); }
+        .action-btn.edit:hover { background: rgba(251, 191, 36, 0.3); }
+        .col-keterangan {
+            max-width: 200px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .col-aksi {
+            white-space: nowrap;
+            min-width: 200px;
+        }
+        .hidden { display: none; }
+
+        /* Custom Modal Dialogs */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex;
+        }
+
+        .custom-modal {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            color: white;
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .custom-modal-overlay.show .custom-modal {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .modal-content {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 10px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .modal-actions .btn {
+            min-width: 100px;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Snackbar */
+        .snackbar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 6000;
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 350px;
+            min-width: 280px;
+        }
+
+        .snackbar.show {
+            transform: translateX(0);
+        }
+
+        .snackbar-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .snackbar-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .snackbar-message {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .snackbar-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .snackbar-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Detail Modal */
+        .detail-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+        }
+
+        .detail-modal-overlay.show {
+            display: flex;
+        }
+
+        .detail-modal {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            width: 95%;
+            max-width: 1200px;
+            max-height: 90vh;
+            color: white;
+            transform: scale(0.8);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-modal-overlay.show .detail-modal {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .detail-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .detail-modal-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .detail-close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .detail-close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .detail-modal-content {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .detail-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Detail Table Container */
+        .detail-table-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .detail-table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-pagination-controls label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .detail-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+
+        .detail-select:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .detail-select:focus {
+            outline: none;
+            border-color: rgba(74, 144, 226, 0.5);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+        }
+
+        .detail-select option {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+        }
+
+        .detail-select option:hover {
+            background: rgba(74, 144, 226, 0.3);
+        }
+
+        .detail-pagination-info {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Detail Pagination */
+        .detail-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-pagination-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .detail-pagination-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .detail-pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .detail-pagination-pages {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .detail-page-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        .detail-page-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .detail-page-btn.active {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            border-color: rgba(74, 144, 226, 0.5);
+        }
+
+        .detail-page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; position: relative; height: auto; }
+            .main-content { margin-left: 0; }
+            .detail-modal { width: 98%; max-height: 95vh; }
+            .detail-modal-content { padding: 20px; }
+            .detail-info { grid-template-columns: 1fr; }
+            .detail-table-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            .detail-pagination {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .detail-pagination-pages {
+                order: -1;
+                width: 100%;
+                justify-content: center;
+            }
+            .upload-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .upload-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo-section">
+                <h2>PT Doven Tradeco</h2>
+                <p>Business Dashboard</p>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i>📊</i> Dashboard</a></li>
+                <li><a href="invoices.html"><i>📄</i> Invoices</a></li>
+                <li><a href="bank.html" class="active"><i>🏦</i> Bank</a></li>
+                <li><a href="po.html"><i>📋</i> PO</a></li>
+                <li><a href="#" onclick="logout()"><i>🚪</i> Logout</a></li>
+            </ul>
+        </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Bank Upload</h1>
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <span>Admin User</span>
+                </div>
+            </div>
+            <div class="upload-section">
+                <input type="file" id="bankFileInput" accept=".csv" style="display:none" />
+                <div class="upload-buttons">
+                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload CSV Bank</button>
+                    <button class="upload-btn" id="clearDataBtn" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);"><span>🗑️</span>Clear Data (DEMO ONLY)</button>
+                </div>
+                <span id="uploadFileName" style="margin-top:10px;color:#fff;display:block;"></span>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" id="tabPerFile">Per File</button>
+                <button class="tab-btn" id="tabAllData">Semua Data</button>
+            </div>
+            <div class="tab-content" id="tabContentPerFile">
+                <table class="file-table" id="fileTable">
+                    <thead>
+                        <tr>
+                            <th>Nama File</th>
+                            <th>Tanggal Upload</th>
+                            <th>Rekening</th>
+                            <th>Nama</th>
+                            <th>Periode</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fileTableBody">
+                        <!-- Data file upload -->
+                    </tbody>
+                </table>
+
+            </div>
+            <div class="tab-content hidden" id="tabContentAllData">
+                <table class="mutasi-table" id="allDataTable">
+                                            <thead>
+                            <tr>
+                                <th>Nama File</th>
+                                <th>Tanggal</th>
+                                <th class="col-keterangan">Keterangan</th>
+                                <th>Cabang</th>
+                                <th>Jumlah</th>
+                                <th>Saldo</th>
+                                <th>Status</th>
+                                <th class="col-aksi">Aksi</th>
+                            </tr>
+                        </thead>
+                    <tbody id="allDataBody">
+                        <!-- Semua data mutasi -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal Dialogs -->
+    <div class="custom-modal-overlay" id="customModalOverlay">
+        <div class="custom-modal" id="customModal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Confirmation</h3>
+                <button class="close-btn" onclick="closeCustomModal()">&times;</button>
+            </div>
+            
+            <div class="modal-content">
+                <div class="modal-icon" id="modalIcon">❓</div>
+                <div class="modal-message" id="modalMessage">Are you sure you want to proceed?</div>
+            </div>
+            
+            <div class="modal-actions" id="modalActions">
+                <button class="btn btn-secondary" onclick="closeCustomModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCustomModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="detail-modal-overlay" id="detailModalOverlay">
+        <div class="detail-modal" id="detailModal">
+            <div class="detail-modal-header">
+                <h3 class="detail-modal-title">Detail Mutasi: <span id="detailFileName"></span></h3>
+                <button class="detail-close-btn" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="detail-modal-content">
+                <div class="detail-info">
+                    <div class="detail-info-item">
+                        <span class="detail-label">Rekening:</span>
+                        <span class="detail-value" id="detailRekening"></span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-label">Nama:</span>
+                        <span class="detail-value" id="detailNama"></span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-label">Periode:</span>
+                        <span class="detail-value" id="detailPeriode"></span>
+                    </div>
+                </div>
+                <div class="detail-table-container">
+                    <div class="detail-table-header">
+                        <div class="detail-pagination-controls">
+                            <label for="detailItemsPerPage">Data per halaman:</label>
+                            <select id="detailItemsPerPage" class="detail-select">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="detail-pagination-info">
+                            <span id="detailPaginationInfo">Menampilkan 1-10 dari 0 data</span>
+                        </div>
+                    </div>
+                    <table class="mutasi-table" id="mutasiDetailTable">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th class="col-keterangan">Keterangan</th>
+                                <th>Cabang</th>
+                                <th>Jumlah</th>
+                                <th>Saldo</th>
+                                <th>Status</th>
+                                <th class="col-aksi">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mutasiDetailBody">
+                        </tbody>
+                    </table>
+                    <div class="detail-pagination">
+                        <button class="detail-pagination-btn" id="detailPrevBtn" onclick="changeDetailPage('prev')" disabled>‹ Sebelumnya</button>
+                        <div class="detail-pagination-pages" id="detailPaginationPages">
+                            <!-- Pagination pages will be generated here -->
+                        </div>
+                        <button class="detail-pagination-btn" id="detailNextBtn" onclick="changeDetailPage('next')" disabled>Selanjutnya ›</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snackbar Notification -->
+    <div class="snackbar" id="snackbar">
+        <div class="snackbar-content">
+            <div class="snackbar-icon" id="snackbarIcon">✅</div>
+            <div class="snackbar-message" id="snackbarMessage">Operation completed successfully!</div>
+        </div>
+        <button class="snackbar-close" onclick="closeSnackbar()">&times;</button>
+    </div>
+
+    <script src="../logic/bank.js"></script>
+</body>
+</html> 
