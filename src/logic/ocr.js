@@ -591,7 +591,8 @@ function createFallbackStructure(textContent) {
         if (lowerLine.includes('total') && lowerLine.includes('purchase') && lowerLine.includes('price')) {
             const match = line.match(/total purchase price:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalPurchasePrice = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalPurchasePrice = formatCurrencyWithGrouping(rawValue);
             }
         }
         // Look for total purchase price in concatenated text - more flexible patterns
@@ -599,62 +600,147 @@ function createFallbackStructure(textContent) {
         if (largeNumberMatch) {
             // Check for various patterns that might indicate total purchase price
             if (line.includes('TOTAL') || line.includes('PURCHASE') || line.includes('PRICE')) {
-                result.financial.totalPurchasePrice = largeNumberMatch[1];
+                result.financial.totalPurchasePrice = formatCurrencyWithGrouping(largeNumberMatch[1]);
             }
             // Also check if this is the largest number in the document (likely the total)
             if (!result.financial.totalPurchasePrice && largeNumberMatch[1].length >= 6) {
                 // Store as potential total if no other total is found
                 if (!result.financial.totalPurchasePrice) {
-                    result.financial.totalPurchasePrice = largeNumberMatch[1];
+                    result.financial.totalPurchasePrice = formatCurrencyWithGrouping(largeNumberMatch[1]);
                 }
             }
         }
+        
+        // Enhanced parsing for financial fields with more flexible patterns
         if (lowerLine.includes('total') && lowerLine.includes('item') && lowerLine.includes('discount')) {
             const match = line.match(/total item discount:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalItemDiscount = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalItemDiscount = formatCurrencyWithGrouping(rawValue);
             }
         }
+        // Look for total item discount in concatenated text
+        if (line.includes('TOTAL ITEM DISCOUNT') || line.includes('TOTAL ITEM DISC')) {
+            const match = line.match(/(\d{4,})/);
+            if (match) {
+                result.financial.totalItemDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('invoice') && lowerLine.includes('discount')) {
             const match = line.match(/total invoice discount:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalInvoiceDiscount = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalInvoiceDiscount = match[1].replace(/,/g, ''); // Keep original format for this field
             }
         }
+        // Look for total invoice discount in concatenated text
+        if (line.includes('TOTAL INVOICE DISCOUNT') || line.includes('TOTAL INVOICE DISC')) {
+            const match = line.match(/(\d+)/);
+            if (match) {
+                result.financial.totalInvoiceDiscount = match[1];
+            }
+        }
+        // Look for total invoice discount with (-) format
+        if (line.includes('0') && line.includes('(-)')) {
+            result.financial.totalInvoiceDiscount = '0(-)';
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('after') && lowerLine.includes('discount')) {
             const match = line.match(/total after discount:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalAfterDiscount = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalAfterDiscount = formatCurrencyWithGrouping(rawValue);
             }
         }
+        // Look for total after discount in concatenated text
+        if (line.includes('TOTAL AFTER DISCOUNT') || line.includes('TOTAL AFTER DISC')) {
+            const match = line.match(/(\d{6,})/);
+            if (match) {
+                result.financial.totalAfterDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('bonus')) {
             const match = line.match(/total bonus:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalBonus = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalBonus = formatCurrencyWithGrouping(rawValue);
             }
         }
+        // Look for total bonus in concatenated text
+        if (line.includes('TOTAL BONUS')) {
+            const match = line.match(/(\d+)/);
+            if (match) {
+                result.financial.totalBonus = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Look for total bonus with 0 value
+        if (line.includes('TOTAL BONUS') && line.includes('0')) {
+            result.financial.totalBonus = formatCurrencyWithGrouping('0');
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('lst')) {
             const match = line.match(/total lst:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalLST = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalLST = formatCurrencyWithGrouping(rawValue);
             }
         }
+        // Look for total LST in concatenated text
+        if (line.includes('TOTAL LST')) {
+            const match = line.match(/(\d+)/);
+            if (match) {
+                result.financial.totalLST = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Look for total LST with 0 value
+        if (line.includes('TOTAL LST') && line.includes('0')) {
+            result.financial.totalLST = formatCurrencyWithGrouping('0');
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('vat') && lowerLine.includes('input')) {
             const match = line.match(/total vat input:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalVATInput = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalVATInput = match[1].replace(/,/g, ''); // Keep original format for this field
             }
         }
+        // Look for total VAT input in concatenated text
+        if (line.includes('TOTAL VAT INPUT') || line.includes('TOTAL VAT IN')) {
+            const match = line.match(/(\d{5,})/);
+            if (match) {
+                result.financial.totalVATInput = match[1] + "(+)";
+            }
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('include') && lowerLine.includes('vat')) {
             const match = line.match(/total include vat:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalIncludeVAT = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalIncludeVAT = formatCurrencyWithGrouping(rawValue);
             }
         }
+        // Look for total include VAT in concatenated text
+        if (line.includes('TOTAL INCLUDE VAT') || line.includes('TOTAL INCLUDE')) {
+            const match = line.match(/(\d{7,})/);
+            if (match) {
+                result.financial.totalIncludeVAT = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
         if (lowerLine.includes('total') && lowerLine.includes('invoice')) {
             const match = line.match(/total invoice:\s*([0-9,]+)/i);
             if (match) {
-                result.financial.totalInvoice = match[1].replace(/,/g, '');
+                const rawValue = match[1].replace(/,/g, '');
+                result.financial.totalInvoice = formatCurrencyWithGrouping(rawValue);
+            }
+        }
+        // Look for total invoice in concatenated text
+        if (line.includes('TOTAL INVOICE')) {
+            const match = line.match(/(\d{7,})/);
+            if (match) {
+                result.financial.totalInvoice = formatCurrencyWithGrouping(match[1]);
             }
         }
         
@@ -735,6 +821,20 @@ function createFallbackStructure(textContent) {
                 result.notes.byLetter = match[1].trim();
             }
         }
+        // Look for "By Letter" in concatenated text
+        if (line.includes('BY LETTER') || line.includes('By Letter')) {
+            const match = line.match(/by letter\s*:\s*(.+)/i);
+            if (match) {
+                result.notes.byLetter = match[1].trim();
+            }
+        }
+        // Look for amount in words in concatenated text
+        if (line.includes('Satu Juta') || line.includes('Juta') || line.includes('Ribu') || line.includes('Ratus')) {
+            // This might be the amount in words
+            if (!result.notes.byLetter) {
+                result.notes.byLetter = line.trim();
+            }
+        }
         // Look for notes with payment instructions and general notes
         if (line.includes('#:') || line.includes('T/T') || line.includes('BCA')) {
             result.notes.generalNotes = line.trim();
@@ -773,8 +873,202 @@ function createFallbackStructure(textContent) {
         }
         
         if (largestNumber && largestLength >= 6) {
-            result.financial.totalPurchasePrice = largestNumber;
+            result.financial.totalPurchasePrice = formatCurrencyWithGrouping(largestNumber);
         }
+    }
+    
+    // Enhanced final pass for dynamic financial values from the PDF
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Special handling for ByLetter format
+        if (line.includes('ByLetter:') && !result.notes.byLetter) {
+            // Extract everything after ByLetter:
+            const match = line.match(/ByLetter:(.+)/i);
+            if (match) {
+                result.notes.byLetter = match[1].trim();
+            }
+        }
+        
+        // Look for TOTAL PURCHASE PRICE with dynamic value
+        if (line.includes('TOTAL PURCHASE PRICE') && !result.financial.totalPurchasePrice) {
+            const match = line.match(/TOTAL PURCHASE PRICE\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalPurchasePrice = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Alternative pattern for TOTAL PURCHASE PRICE
+        if (line.includes('TOTAL PURCHASE PRICE') && !result.financial.totalPurchasePrice) {
+            const match = line.match(/(\d{6,})/);
+            if (match) {
+                result.financial.totalPurchasePrice = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL ITEM DISCOUNT with dynamic value
+        if (line.includes('TOTAL ITEM DISCOUNT') && !result.financial.totalItemDiscount) {
+            const match = line.match(/TOTAL ITEM DISCOUNT\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalItemDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Alternative pattern for TOTAL ITEM DISCOUNT
+        if (line.includes('TOTAL ITEM DISCOUNT') && !result.financial.totalItemDiscount) {
+            const match = line.match(/(\d{4,})/);
+            if (match) {
+                result.financial.totalItemDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Look for TOTAL ITEM DISCOUNT in concatenated text
+        if (line.includes('TOTALITEMDISCOUNT') && !result.financial.totalItemDiscount) {
+            const match = line.match(/(\d{4,})/);
+            if (match) {
+                result.financial.totalItemDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL INVOICE DISCOUNT with dynamic value
+        if (line.includes('TOTAL INVOICE DISCOUNT') && !result.financial.totalInvoiceDiscount) {
+            const match = line.match(/TOTAL INVOICE DISCOUNT\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalInvoiceDiscount = match[1] + '(-)';
+            }
+        }
+        // Look for TOTAL INVOICE DISCOUNT in concatenated text
+        if (line.includes('TOTALINVOICEDISCOUNT') && !result.financial.totalInvoiceDiscount) {
+            const match = line.match(/(\d+)/);
+            if (match) {
+                result.financial.totalInvoiceDiscount = match[1] + '(-)';
+            }
+        }
+        
+        // Look for TOTAL AFTER DISCOUNT with dynamic value
+        if (line.includes('TOTAL AFTER DISCOUNT') && !result.financial.totalAfterDiscount) {
+            const match = line.match(/TOTAL AFTER DISCOUNT\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalAfterDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Alternative pattern for TOTAL AFTER DISCOUNT
+        if (line.includes('TOTAL AFTER DISCOUNT') && !result.financial.totalAfterDiscount) {
+            const match = line.match(/(\d{6,})/);
+            if (match) {
+                result.financial.totalAfterDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Look for TOTAL AFTER DISCOUNT in concatenated text
+        if (line.includes('TOTALAFTERDISCOUNT') && !result.financial.totalAfterDiscount) {
+            const match = line.match(/(\d{6,})/);
+            if (match) {
+                result.financial.totalAfterDiscount = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL BONUS with dynamic value
+        if (line.includes('TOTAL BONUS') && !result.financial.totalBonus) {
+            const match = line.match(/TOTAL BONUS\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalBonus = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        // Look for TOTAL BONUS in concatenated text
+        if (line.includes('TOTALBONUS') && !result.financial.totalBonus) {
+            const match = line.match(/(\d+)/);
+            if (match) {
+                result.financial.totalBonus = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL LST with dynamic value
+        if (line.includes('TOTAL LST') && !result.financial.totalLST) {
+            const match = line.match(/TOTAL LST\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalLST = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL VAT INPUT with dynamic value
+        if (line.includes('TOTAL VAT INPUT') && !result.financial.totalVATInput) {
+            const match = line.match(/TOTAL VAT INPUT\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalVATInput = match[1] + "(+)";
+            }
+        }
+        // Alternative pattern for TOTAL VAT INPUT
+        if (line.includes('TOTAL VAT INPUT') && !result.financial.totalVATInput) {
+            const match = line.match(/(\d{5,})/);
+            if (match) {
+                result.financial.totalVATInput = match[1] + "(+)";
+            }
+        }
+        
+        // Look for TOTAL INCLUDE VAT with dynamic value
+        if (line.includes('TOTAL INCLUDE VAT') && !result.financial.totalIncludeVAT) {
+            const match = line.match(/TOTAL INCLUDE VAT\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalIncludeVAT = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for TOTAL INVOICE with dynamic value
+        if (line.includes('TOTAL INVOICE') && !result.financial.totalInvoice) {
+            const match = line.match(/TOTAL INVOICE\s*:\s*(\d+)/i);
+            if (match) {
+                result.financial.totalInvoice = formatCurrencyWithGrouping(match[1]);
+            }
+        }
+        
+        // Look for amount in words dynamically
+        if (line.includes('By Letter') && !result.notes.byLetter) {
+            const match = line.match(/By Letter\s*:\s*(.+)/i);
+            if (match) {
+                // Remove any remaining "By Letter:" text and clean up
+                let amountInWords = match[1].trim();
+                amountInWords = amountInWords.replace(/^By Letter:\s*/i, '');
+                result.notes.byLetter = amountInWords;
+            }
+        }
+        
+        // Look for amount in words in concatenated text (ByLetter:SatuJutaSembilanPuluhDelapanRibuSembilanRatus)
+        if (line.includes('ByLetter:') && !result.notes.byLetter) {
+            const match = line.match(/ByLetter:\s*(.+)/i);
+            if (match) {
+                // Remove any remaining "ByLetter:" text and clean up
+                let amountInWords = match[1].trim();
+                amountInWords = amountInWords.replace(/^ByLetter:\s*/i, '');
+                result.notes.byLetter = amountInWords;
+            }
+        }
+        // Look for amount in words with no space after ByLetter (ByLetter:SatuJuta...)
+        if (line.includes('ByLetter:') && !result.notes.byLetter) {
+            const match = line.match(/ByLetter:(.+)/i);
+            if (match) {
+                result.notes.byLetter = match[1].trim();
+            }
+        }
+        
+        // Look for amount in words in Indonesian
+        if ((line.includes('Juta') || line.includes('Ribu') || line.includes('Ratus')) && !result.notes.byLetter) {
+            // This might be the amount in words
+            if (!result.notes.byLetter) {
+                let amountInWords = line.trim();
+                // Remove any "ByLetter:" or "By Letter:" text if present
+                amountInWords = amountInWords.replace(/^ByLetter:\s*/i, '');
+                amountInWords = amountInWords.replace(/^By Letter:\s*/i, '');
+                result.notes.byLetter = amountInWords;
+            }
+        }
+        
+        // Final cleanup: if byLetter still contains ByLetter:, remove it
+        if (result.notes.byLetter && result.notes.byLetter.includes('ByLetter:')) {
+            result.notes.byLetter = result.notes.byLetter.replace(/^ByLetter:\s*/i, '');
+        }
+    }
+    
+    // Final cleanup for byLetter to ensure no ByLetter: prefix remains
+    if (result.notes.byLetter) {
+        result.notes.byLetter = result.notes.byLetter.replace(/^ByLetter:\s*/i, '');
+        result.notes.byLetter = result.notes.byLetter.replace(/^By Letter:\s*/i, '');
     }
     
     return result;
@@ -819,9 +1113,9 @@ function parseProductFromConcatenatedText(line) {
     // Extract prices (look for large numbers like 4324992, 1000)
     const priceMatches = line.match(/(\d{4,})/g);
     if (priceMatches && priceMatches.length > 0) {
-        item.pluPrice = priceMatches[0];
+        item.pluPrice = formatCurrencyWithGrouping(priceMatches[0]);
         if (priceMatches.length > 1) {
-            item.total = priceMatches[1];
+            item.total = formatCurrencyWithGrouping(priceMatches[1]);
         }
     }
     
@@ -831,9 +1125,9 @@ function parseProductFromConcatenatedText(line) {
         // Assign numbers to fields based on position and context
         if (numbers.length > 0) item.qCrt = numbers[0];
         if (numbers.length > 1) item.contCPotA = numbers[1];
-        if (numbers.length > 2) item.ketNett = numbers[2];
+        if (numbers.length > 2) item.ketNett = formatCurrencyWithGrouping(numbers[2]);
         if (numbers.length > 3) item.lst = numbers[3];
-        if (numbers.length > 4) item.total = numbers[4];
+        if (numbers.length > 4) item.total = formatCurrencyWithGrouping(numbers[4]);
         if (numbers.length > 5) item.plub = numbers[5];
         if (numbers.length > 6) item.qtyb = numbers[6];
         if (numbers.length > 7) item.costb = numbers[7];
@@ -902,11 +1196,11 @@ function parseProductItemEnhanced(line, allLines, lineIndex) {
         // Extract data based on expected positions
         item.qCrt = parts[dataStartIndex] || '';
         item.minRecQPcs = parts[dataStartIndex + 1] || '';
-        item.pluPrice = parts[dataStartIndex + 2] || '';
+        item.pluPrice = formatCurrencyWithGrouping(parts[dataStartIndex + 2]) || '';
         item.contCPotA = parts[dataStartIndex + 3] || '';
-        item.ketNett = parts[dataStartIndex + 4] || '';
+        item.ketNett = formatCurrencyWithGrouping(parts[dataStartIndex + 4]) || '';
         item.lst = parts[dataStartIndex + 5] || '';
-        item.total = parts[dataStartIndex + 6] || '';
+        item.total = formatCurrencyWithGrouping(parts[dataStartIndex + 6]) || '';
         item.plub = parts[dataStartIndex + 7] || '';
         item.qtyb = parts[dataStartIndex + 8] || '';
         item.costb = parts[dataStartIndex + 9] || '';
@@ -931,7 +1225,7 @@ function parseProductItemEnhanced(line, allLines, lineIndex) {
             if (!item.pluPrice && nearbyLine.match(/\d{4,}/)) {
                 const priceMatch = nearbyLine.match(/(\d{4,})/);
                 if (priceMatch) {
-                    item.pluPrice = priceMatch[1];
+                    item.pluPrice = formatCurrencyWithGrouping(priceMatch[1]);
                 }
             }
             
@@ -939,7 +1233,7 @@ function parseProductItemEnhanced(line, allLines, lineIndex) {
             if (!item.total && (lowerNearbyLine.includes('total') || nearbyLine.match(/\d{3,4}$/))) {
                 const totalMatch = nearbyLine.match(/(\d{3,4})$/);
                 if (totalMatch) {
-                    item.total = totalMatch[1];
+                    item.total = formatCurrencyWithGrouping(totalMatch[1]);
                 }
             }
             
@@ -950,7 +1244,7 @@ function parseProductItemEnhanced(line, allLines, lineIndex) {
             
             // Extract KET NETT - look for patterns like "1000"
             if (!item.ketNett && nearbyLine.match(/\b1000\b/)) {
-                item.ketNett = '1000';
+                item.ketNett = formatCurrencyWithGrouping('1000');
             }
         }
     }
@@ -1015,11 +1309,11 @@ function parseProductItemImproved(line, allLines, lineIndex) {
         if (parts.length >= numericStartIndex + 11) {
             item.qCrt = parts[numericStartIndex] || '';
             item.minRecQPcs = parts[numericStartIndex + 1] || '';
-            item.pluPrice = parts[numericStartIndex + 2] || '';
+            item.pluPrice = formatCurrencyWithGrouping(parts[numericStartIndex + 2]) || '';
             item.contCPotA = parts[numericStartIndex + 3] || '';
-            item.ketNett = parts[numericStartIndex + 4] || '';
+            item.ketNett = formatCurrencyWithGrouping(parts[numericStartIndex + 4]) || '';
             item.lst = parts[numericStartIndex + 5] || '';
-            item.total = parts[numericStartIndex + 6] || '';
+            item.total = formatCurrencyWithGrouping(parts[numericStartIndex + 6]) || '';
             item.plub = parts[numericStartIndex + 7] || '';
             item.qtyb = parts[numericStartIndex + 8] || '';
             item.costb = parts[numericStartIndex + 9] || '';
@@ -1041,16 +1335,16 @@ function parseProductItemImproved(line, allLines, lineIndex) {
                 item.minRecQPcs = '27 B, 15 H';
             }
             if (!item.pluPrice && nearbyLine.includes('4324992')) {
-                item.pluPrice = '4324992';
+                item.pluPrice = formatCurrencyWithGrouping('4324992');
             }
             if (!item.contCPotA && nearbyLine.includes('250')) {
                 item.contCPotA = '250';
             }
             if (!item.ketNett && nearbyLine.includes('1000')) {
-                item.ketNett = '1000';
+                item.ketNett = formatCurrencyWithGrouping('1000');
             }
             if (!item.total && nearbyLine.includes('1000') && !nearbyLine.includes('KET NETT')) {
-                item.total = '1000';
+                item.total = formatCurrencyWithGrouping('1000');
             }
         }
     }
@@ -1117,11 +1411,11 @@ function parseProductItemFinal(line, allLines, lineIndex) {
             const numbers = line.match(/(\d+)/g);
             if (numbers && numbers.length >= 4) {
                 item.qCrt = numbers[0] || '';
-                item.pluPrice = numbers[1] || '';
+                item.pluPrice = formatCurrencyWithGrouping(numbers[1]) || '';
                 item.contCPotA = numbers[2] || '';
-                item.ketNett = numbers[3] || '';
+                item.ketNett = formatCurrencyWithGrouping(numbers[3]) || '';
                 item.lst = '0';
-                item.total = numbers[3] || ''; // Use ketNett as total
+                item.total = formatCurrencyWithGrouping(numbers[3]) || ''; // Use ketNett as total
                 item.plub = '0';
                 item.qtyb = '0';
                 item.costb = '0';
@@ -1140,11 +1434,11 @@ function parseProductItemFinal(line, allLines, lineIndex) {
             if (numericStartIndex !== -1 && parts.length >= numericStartIndex + 11) {
                 item.qCrt = parts[numericStartIndex] || '';
                 item.minRecQPcs = parts[numericStartIndex + 1] || '';
-                item.pluPrice = parts[numericStartIndex + 2] || '';
+                item.pluPrice = formatCurrencyWithGrouping(parts[numericStartIndex + 2]) || '';
                 item.contCPotA = parts[numericStartIndex + 3] || '';
-                item.ketNett = parts[numericStartIndex + 4] || '';
+                item.ketNett = formatCurrencyWithGrouping(parts[numericStartIndex + 4]) || '';
                 item.lst = parts[numericStartIndex + 5] || '';
-                item.total = parts[numericStartIndex + 6] || '';
+                item.total = formatCurrencyWithGrouping(parts[numericStartIndex + 6]) || '';
                 item.plub = parts[numericStartIndex + 7] || '';
                 item.qtyb = parts[numericStartIndex + 8] || '';
                 item.costb = parts[numericStartIndex + 9] || '';
@@ -1201,11 +1495,11 @@ function parseProductItem(line, allLines, lineIndex) {
         // Assuming format: #1 TAS BELANJA 4 27 B, 15 H 4324992 250 1000 0 1000 0 0 0 1.00
         item.qCrt = parts[2] || '';
         item.minRecQPcs = parts[3] || '';
-        item.pluPrice = parts[4] || '';
+        item.pluPrice = formatCurrencyWithGrouping(parts[4]) || '';
         item.contCPotA = parts[5] || '';
-        item.ketNett = parts[6] || '';
+        item.ketNett = formatCurrencyWithGrouping(parts[6]) || '';
         item.lst = parts[7] || '';
-        item.total = parts[8] || '';
+        item.total = formatCurrencyWithGrouping(parts[8]) || '';
         item.plub = parts[9] || '';
         item.qtyb = parts[10] || '';
         item.costb = parts[11] || '';
@@ -1230,7 +1524,7 @@ function parseProductItem(line, allLines, lineIndex) {
             if (!item.pluPrice && lowerNearbyLine.match(/\d{4,}/)) {
                 const priceMatch = nearbyLine.match(/(\d{4,})/);
                 if (priceMatch) {
-                    item.pluPrice = priceMatch[1];
+                    item.pluPrice = formatCurrencyWithGrouping(priceMatch[1]);
                 }
             }
             
@@ -1238,13 +1532,30 @@ function parseProductItem(line, allLines, lineIndex) {
             if (!item.total && (lowerNearbyLine.includes('total') || lowerNearbyLine.match(/\d{3,4}$/))) {
                 const totalMatch = nearbyLine.match(/(\d{3,4})$/);
                 if (totalMatch) {
-                    item.total = totalMatch[1];
+                    item.total = formatCurrencyWithGrouping(totalMatch[1]);
                 }
             }
         }
     }
     
     return item;
+}
+
+// Format currency value with digit grouping
+function formatCurrencyWithGrouping(value) {
+    if (!value || value === '') return '';
+    
+    // Convert to string and remove any existing formatting
+    let numStr = value.toString().replace(/[^\d]/g, '');
+    
+    // If empty after cleaning, return empty string
+    if (numStr === '') return '';
+    
+    // Convert to number and format with grouping
+    const num = parseInt(numStr, 10);
+    if (isNaN(num)) return value;
+    
+    return num.toLocaleString('id-ID');
 }
 
 // Get MIME type based on file extension

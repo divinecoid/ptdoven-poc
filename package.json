@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/divinecoid/ptdoven-poc#readme",
   "devDependencies": {
-    "electron": "^37.2.4",
+    "electron": "^37.2.5",
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
