@@ -96,7 +96,7 @@ fileInput.onchange = (e) => {
         renderAllDataTable();
         uploadFileName.textContent = '';
         fileInput.value = '';
-        showSnackbar('✅ Upload & parsing berhasil!', 'success');
+        showSnackbar('Upload & parsing berhasil!', 'success');
     };
     reader.readAsText(file);
 };

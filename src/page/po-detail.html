@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PO Detail - PT Doven Tradeco</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-item label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .info-item span {
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .items-table th,
+        .items-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .items-table th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        .items-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .notes-section {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .notes-section h2 {
+            border-bottom-color: #ffc107;
+        }
+
+        .note-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .financial-summary {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+
+        .financial-summary h2 {
+            border-bottom-color: #17a2b8;
+        }
+
+        .amount-highlight {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .no-data {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .items-table {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">← Kembali</button>
+            <h1>Detail Purchase Order</h1>
+            <p>Informasi lengkap PO yang diekstrak dari dokumen</p>
+        </div>
+
+        <div class="content" id="content">
+            <div class="loading">Memuat data...</div>
+        </div>
+    </div>
+
+    <script>
+        // Load and display PO details
+        function loadPODetails() {
+            try {
+                const detailedData = localStorage.getItem('poDetailedData');
+                if (!detailedData) {
+                    showNoData();
+                    return;
+                }
+
+                const data = JSON.parse(detailedData);
+                displayPODetails(data);
+            } catch (error) {
+                console.error('Error loading PO details:', error);
+                showNoData();
+            }
+        }
+
+        function displayPODetails(data) {
+            const content = document.getElementById('content');
+            
+            content.innerHTML = `
+                <!-- Supplier Information -->
+                <div class="section">
+                    <h2>Informasi Supplier</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Nama Supplier:</label>
+                            <span>${data.supplierDetails?.name || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Alamat:</label>
+                            <span>${data.supplierDetails?.address || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Telepon:</label>
+                            <span>${data.supplierDetails?.phone || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Fax:</label>
+                            <span>${data.supplierDetails?.fax || 'Tidak tersedia'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delivery Information -->
+                <div class="section">
+                    <h2>Informasi Pengiriman</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Kirim Ke:</label>
+                            <span>${data.deliveryDetails?.deliverTo || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Nomor Kendaraan:</label>
+                            <span>${data.deliveryDetails?.vehicleNumber || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Palet:</label>
+                            <span>${data.deliveryDetails?.palet || 'Tidak tersedia'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Information -->
+                <div class="section">
+                    <h2>Informasi Order</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>FPP Number:</label>
+                            <span>${data.orderDetails?.fppNumber || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Tanggal Order:</label>
+                            <span>${data.orderDetails?.orderDate || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Tanggal Pengiriman:</label>
+                            <span>${data.orderDetails?.deliveryDate || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Jadwal Jam:</label>
+                            <span>${data.orderDetails?.hourSchedule || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Pintu:</label>
+                            <span>${data.orderDetails?.door || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Waktu Proses:</label>
+                            <span>${data.orderDetails?.processDateTime || 'Tidak tersedia'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="section">
+                    <h2>Daftar Produk</h2>
+                    ${generateItemsTable(data.items)}
+                </div>
+
+                <!-- Financial Summary -->
+                <div class="section financial-summary">
+                    <h2>Ringkasan Keuangan</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Diskon Invoice:</label>
+                            <span>${data.financialDetails?.invoiceDisc || 'Tidak tersedia'}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Harga Pembelian:</label>
+                            <span class="amount-highlight">${formatCurrency(data.financialDetails?.totalPurchasePrice)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Diskon Item:</label>
+                            <span>${formatCurrency(data.financialDetails?.totalItemDiscount)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Diskon Invoice:</label>
+                            <span>${formatCurrency(data.financialDetails?.totalInvoiceDiscount)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Setelah Diskon:</label>
+                            <span class="amount-highlight">${formatCurrency(data.financialDetails?.totalAfterDiscount)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Bonus:</label>
+                            <span>${formatCurrency(data.financialDetails?.totalBonus)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total LST:</label>
+                            <span>${formatCurrency(data.financialDetails?.totalLST)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total VAT Input:</label>
+                            <span>${formatCurrency(data.financialDetails?.totalVATInput)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Include VAT:</label>
+                            <span class="amount-highlight">${formatCurrency(data.financialDetails?.totalIncludeVAT)}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Invoice:</label>
+                            <span class="amount-highlight">${formatCurrency(data.financialDetails?.totalInvoice)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="section notes-section">
+                    <h2>Catatan dan Keterangan</h2>
+                    ${generateNotesSection(data.notes)}
+                </div>
+            `;
+        }
+
+        function generateItemsTable(items) {
+            if (!items || items.length === 0) {
+                return '<div class="no-data">Tidak ada data produk</div>';
+            }
+
+            return `
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Nama Produk</th>
+                            <th>Q_Crt</th>
+                            <th>MIN_REC Q_PCS</th>
+                            <th>PLU Price</th>
+                            <th>CONT(C) POT A</th>
+                            <th>KET NETT</th>
+                            <th>LST</th>
+                            <th>Total</th>
+                            <th>PLUB</th>
+                            <th>QTYB</th>
+                            <th>COSTB</th>
+                            <th>POTB</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td>${item.productName || ''}</td>
+                                <td>${item.qCrt || ''}</td>
+                                <td>${item.minRecQPcs || ''}</td>
+                                <td>${formatCurrency(item.pluPrice)}</td>
+                                <td>${item.contCPotA || ''}</td>
+                                <td>${formatCurrency(item.ketNett)}</td>
+                                <td>${formatCurrency(item.lst)}</td>
+                                <td>${formatCurrency(item.total)}</td>
+                                <td>${formatCurrency(item.plub)}</td>
+                                <td>${item.qtyb || ''}</td>
+                                <td>${formatCurrency(item.costb)}</td>
+                                <td>${item.potb || ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function generateNotesSection(notes) {
+            if (!notes) {
+                return '<div class="no-data">Tidak ada catatan</div>';
+            }
+
+            return `
+                <div class="info-grid">
+                    ${notes.generalNotes ? `
+                        <div class="info-item">
+                            <label>Catatan Umum:</label>
+                            <span>${notes.generalNotes}</span>
+                        </div>
+                    ` : ''}
+                    ${notes.byLetter ? `
+                        <div class="info-item">
+                            <label>Dengan Huruf:</label>
+                            <span>${notes.byLetter}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ${notes.nb && notes.nb.length > 0 ? `
+                    <div style="margin-top: 20px;">
+                        <label style="font-weight: bold; display: block; margin-bottom: 10px;">NB:</label>
+                        ${notes.nb.map((note, index) => `
+                            <div class="note-item">
+                                <strong>${index + 1}.</strong> ${note}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function formatCurrency(amount) {
+            if (!amount || amount === '') return 'Tidak tersedia';
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR'
+            }).format(amount);
+        }
+
+        function showNoData() {
+            document.getElementById('content').innerHTML = `
+                <div class="no-data">
+                    <h3>Tidak ada data PO yang tersedia</h3>
+                    <p>Silakan upload file PO terlebih dahulu untuk melihat detail</p>
+                </div>
+            `;
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadPODetails);
+    </script>
+</body>
+</html> 

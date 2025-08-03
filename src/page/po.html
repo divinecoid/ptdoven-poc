@@ -236,14 +236,12 @@
 
         .file-icon {
             font-size: 48px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             width: 60px;
             height: 60px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
         .file-info {
@@ -503,6 +501,21 @@
             transform: translateY(-1px);
         }
 
+        .btn-detail {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 5px;
+            font-size: 0.8em;
+        }
+        
+        .btn-detail:hover {
+            background: #138496;
+        }
+
         /* Snackbar */
         .snackbar {
             position: fixed;
@@ -620,14 +633,15 @@
                 </div>
             </div>
             <div class="upload-section">
-                <input type="file" id="poFileInput" accept=".csv,.xlsx,.xls,.edi,.EDI" style="display:none" />
+                <input type="file" id="poFileInput" accept=".csv,.xlsx,.xls,.edi,.EDI,.pdf,.jpg,.jpeg,.png,.gif,.bmp,.webp" style="display:none" />
                 <div class="upload-buttons">
-                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload PO (EDI/CSV/Excel)</button>
+                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload PO (EDI/CSV/Excel/PDF/Image)</button>
                     <button class="upload-btn" id="clearDataBtn" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);"><span>🗑️</span>Clear Data (DEMO ONLY)</button>
                 </div>
                 <span id="uploadFileName" style="margin-top:10px;color:#fff;display:block;"></span>
                 <div style="margin-top:10px;color:rgba(255,255,255,0.7);font-size:12px;">
-                    <strong>Format yang didukung:</strong> .edi, .EDI, .csv, .xlsx, .xls
+                    <strong>Format yang didukung:</strong> .edi, .EDI, .csv, .xlsx, .xls, .pdf, .jpg, .jpeg, .png, .gif, .bmp, .webp
+                    <br><strong>OCR Support:</strong> PDF dan gambar akan diproses dengan Google Generative AI
                 </div>
             </div>
             <div class="tabs">

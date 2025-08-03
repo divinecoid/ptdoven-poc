@@ -58,52 +58,246 @@ function showTab(tab) {
 tabPerFile.onclick = () => showTab('perfile');
 tabAllData.onclick = () => showTab('alldata');
 
-// Upload logic
+// Upload logic with OCR support
 uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange = (e) => {
+fileInput.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
     // Validate file extension
     const fileExtension = file.name.toLowerCase().split('.').pop();
-    const allowedExtensions = ['csv', 'xlsx', 'xls', 'edi'];
+    const allowedExtensions = ['csv', 'xlsx', 'xls', 'edi', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
     
     if (!allowedExtensions.includes(fileExtension)) {
-        showSnackbar('❌ Format file tidak didukung! Gunakan .csv, .xlsx, .xls, atau .edi', 'error');
+        showSnackbar('❌ Format file tidak didukung! Gunakan .csv, .xlsx, .xls, .edi, .pdf, atau gambar (.jpg, .png, dll)', 'error');
         fileInput.value = '';
         return;
     }
     
     uploadFileName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        const text = ev.target.result;
+    
+    try {
         let parsed = null;
         
-        // Check file extension to determine parsing method
-        if (fileExtension === 'edi') {
-            parsed = parsePOEDI(text);
-            if (!parsed) {
-                showSnackbar('❌ Format EDI tidak valid! Pastikan file berisi POHDR dan LIN records.', 'error');
-                return;
-            }
+        // Check if it's an OCR-supported file type
+        if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension)) {
+            // Show processing message
+            showSnackbar('🔄 Memproses OCR... Mohon tunggu', 'info');
+            
+            // Process with OCR
+            parsed = await processFileWithOCR(file);
         } else {
-            parsed = parsePOCSV(text);
-            if (!parsed) {
-                showSnackbar('❌ Format CSV tidak valid! Pastikan file berisi kolom yang benar.', 'error');
-                return;
-            }
+            // Process with existing methods
+            const reader = new FileReader();
+            parsed = await new Promise((resolve, reject) => {
+                reader.onload = function(ev) {
+                    const text = ev.target.result;
+                    let result = null;
+                    
+                    // Check file extension to determine parsing method
+                    if (fileExtension === 'edi') {
+                        result = parsePOEDI(text);
+                        if (!result) {
+                            reject(new Error('Format EDI tidak valid! Pastikan file berisi POHDR dan LIN records.'));
+                            return;
+                        }
+                    } else {
+                        result = parsePOCSV(text);
+                        if (!result) {
+                            reject(new Error('Format CSV tidak valid! Pastikan file berisi kolom yang benar.'));
+                            return;
+                        }
+                    }
+                    resolve(result);
+                };
+                reader.onerror = () => reject(new Error('Gagal membaca file'));
+                reader.readAsText(file);
+            });
         }
         
-        savePOFile(file.name, parsed);
-        renderFileTable();
-        renderAllDataTable();
+        if (parsed) {
+            savePOFile(file.name, parsed);
+            renderFileTable();
+            renderAllDataTable();
+            uploadFileName.textContent = '';
+            fileInput.value = '';
+            showSnackbar(`Upload & parsing ${fileExtension.toUpperCase()} berhasil!`, 'success');
+        }
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        showSnackbar(`❌ Error: ${error.message}`, 'error');
         uploadFileName.textContent = '';
         fileInput.value = '';
-        showSnackbar(`✅ Upload & parsing ${fileExtension.toUpperCase()} berhasil!`, 'success');
-    };
-    reader.readAsText(file);
+    }
 };
+
+// Format currency function
+function formatCurrency(amount) {
+    if (!amount || amount === '' || amount === null || amount === undefined) {
+        return 'Rp 0';
+    }
+    
+    // Convert to number if it's a string
+    let numAmount = amount;
+    if (typeof amount === 'string') {
+        // Remove any non-numeric characters except decimal point
+        numAmount = parseFloat(amount.replace(/[^\d.-]/g, ''));
+        if (isNaN(numAmount)) {
+            return 'Rp 0';
+        }
+    }
+    
+    // Format as Indonesian Rupiah
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(numAmount);
+}
+
+// Save to localStorage
+function saveToLocalStorage(data) {
+    try {
+        // Get existing data
+        const existingData = JSON.parse(localStorage.getItem('poData') || '[]');
+        
+        // Add new data with timestamp
+        const newEntry = {
+            ...data,
+            id: Date.now(),
+            timestamp: new Date().toISOString()
+        };
+        
+        existingData.push(newEntry);
+        
+        // Save back to localStorage
+        localStorage.setItem('poData', JSON.stringify(existingData));
+        
+        console.log('Data saved to localStorage:', newEntry);
+        
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+        showMessage('Error menyimpan data ke localStorage', 'error');
+    }
+}
+
+// Show message function
+function showMessage(message, type = 'info') {
+    const snackbar = document.getElementById('snackbar');
+    const snackbarIcon = document.getElementById('snackbarIcon');
+    const snackbarMessage = document.getElementById('snackbarMessage');
+    
+    if (!snackbar || !snackbarIcon || !snackbarMessage) {
+        // Fallback: create simple alert
+        alert(message);
+        return;
+    }
+    
+    // Set icon based on type
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    snackbarIcon.textContent = icons[type] || icons.info;
+    snackbarMessage.textContent = message;
+    
+    // Show snackbar
+    snackbar.classList.add('show');
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        snackbar.classList.remove('show');
+    }, 3000);
+}
+
+// Process file with OCR
+async function processFileWithOCR(file) {
+    try {
+        console.log('Processing file with OCR...');
+        
+        // Convert file to buffer for IPC
+        const arrayBuffer = await file.arrayBuffer();
+        const fileData = {
+            name: file.name,
+            data: Array.from(new Uint8Array(arrayBuffer))
+        };
+        
+        // Send file data to main process for OCR processing
+        const result = await window.electronAPI.uploadAndOCR(fileData);
+        
+        if (result.success) {
+            console.log('OCR processing successful:', result.data);
+            
+            // Convert the new structured data to table format
+            const tableData = convertOCRDataToTable(result.data);
+            
+            // Save to the existing PO system
+            savePOFile(file.name, tableData);
+            
+            // Refresh tables
+            renderFileTable();
+            renderAllDataTable();
+            
+            // Show success message
+            showMessage('File berhasil diproses dengan OCR!', 'success');
+            
+        } else {
+            console.error('OCR processing failed:', result.error);
+            showMessage(`OCR processing gagal: ${result.error}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error processing file with OCR:', error);
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+// Convert OCR data to table format
+function convertOCRDataToTable(ocrData) {
+    const tableData = {
+        name: 'OCR File',
+        supplier: ocrData.supplier?.name || '',
+        poNumber: ocrData.supplier?.poNumber || ocrData.order?.fppNumber || '',
+        poDate: ocrData.order?.orderDate || '',
+        deliveryDate: ocrData.order?.deliveryDate || '',
+        totalAmount: ocrData.financial?.totalPurchasePrice || ocrData.financial?.totalInvoice || '',
+        items: []
+    };
+    
+    // Convert items array
+    if (ocrData.items && Array.isArray(ocrData.items)) {
+        tableData.items = ocrData.items.map(item => ({
+            itemCode: item.productCode || item.productName || '',
+            description: item.productName || '',
+            quantity: item.qCrt || item.minRecQPcs || '',
+            unitPrice: item.pluPrice || '',
+            total: item.total || '',
+            unit: 'pcs',
+            discount: item.contCPotA || '',
+            status: 'draft'
+        }));
+    }
+    
+    // Add additional data to localStorage for detailed view
+    const detailedData = {
+        ...tableData,
+        supplierDetails: ocrData.supplier || {},
+        deliveryDetails: ocrData.delivery || {},
+        orderDetails: ocrData.order || {},
+        financialDetails: ocrData.financial || {},
+        notes: ocrData.notes || {}
+    };
+    
+    // Store detailed data
+    localStorage.setItem('poDetailedData', JSON.stringify(detailedData));
+    
+    return tableData;
+}
 
 // Clear data logic
 clearDataBtn.onclick = async () => {
@@ -118,7 +312,7 @@ clearDataBtn.onclick = async () => {
             localStorage.removeItem('poUploads');
             renderFileTable();
             renderAllDataTable();
-            showSnackbar('✅ Semua data berhasil dihapus!', 'success');
+            showSnackbar('Semua data berhasil dihapus!', 'success');
         }
     } catch (error) {
         console.error('Error with custom modal, using fallback:', error);
@@ -128,7 +322,7 @@ clearDataBtn.onclick = async () => {
             localStorage.removeItem('poUploads');
             renderFileTable();
             renderAllDataTable();
-            showSnackbar('✅ Semua data berhasil dihapus!', 'success');
+            showSnackbar('Semua data berhasil dihapus!', 'success');
         }
     }
 };
@@ -184,7 +378,7 @@ function parsePOEDI(text) {
     const poDate = pohdrFields[2] || '';
     const deliveryDate = pohdrFields[3] || '';
     const supplier = pohdrFields[8] || ''; // PT EFG
-    const supplierAddress = pohdrFields[9] || ''; // JAKARTA BARAT
+    const supplierAddress = pohdrFields[9] || ''; 
     
     // Parse LIN (Line Items)
     const items = [];
@@ -350,14 +544,31 @@ function showFileDetail(fileId) {
     const file = data.files.find(f => f.id == fileId);
     if (!file) return;
     
+    // Check if this is an OCR file with detailed data
+    const detailedData = localStorage.getItem('poDetailedData');
+    let hasDetailedData = false;
+    let ocrData = null;
+    
+    if (detailedData) {
+        try {
+            ocrData = JSON.parse(detailedData);
+            hasDetailedData = true;
+        } catch (e) {
+            console.log('No detailed OCR data found');
+        }
+    }
+    
+    // Check if file is EDI format (don't show OCR text for EDI files)
+    const isEDIFile = file.name.toLowerCase().endsWith('.edi');
+    
     // Create structured HTML for file detail
     const detailHTML = `
         <div class="file-detail-container">
             <div class="file-detail-header">
-                <div class="file-icon">📋</div>
                 <div class="file-info">
                     <h3 class="file-name">${file.name}</h3>
                     <p class="file-upload-date">📅 Upload Date: ${file.uploadDate}</p>
+                    ${hasDetailedData && !isEDIFile ? '<p style="color: #4ade80;">🤖 Processed with OCR</p>' : ''}
                 </div>
             </div>
             
@@ -422,11 +633,138 @@ function showFileDetail(fileId) {
                         `).join('')}
                     </div>
                 </div>
+                
+                ${hasDetailedData ? `
+                <div class="detail-section">
+                    <h4 class="section-title">OCR Detailed Information</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">📋 FPP Number:</span>
+                            <span class="detail-value">${ocrData.orderDetails?.fppNumber || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">⏰ Hour Schedule:</span>
+                            <span class="detail-value">${ocrData.orderDetails?.hourSchedule || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🚪 Door:</span>
+                            <span class="detail-value">${ocrData.orderDetails?.door || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💰 Total Purchase Price:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalPurchasePrice || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📝 Notes:</span>
+                            <span class="detail-value">${ocrData.notes?.generalNotes || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🏢 Supplier Address:</span>
+                            <span class="detail-value">${ocrData.supplierDetails?.address || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📞 Supplier Phone:</span>
+                            <span class="detail-value">${ocrData.supplierDetails?.phone || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📠 Supplier Fax:</span>
+                            <span class="detail-value">${ocrData.supplierDetails?.fax || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🚚 Delivery To:</span>
+                            <span class="detail-value">${ocrData.deliveryDetails?.deliverTo || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🚛 Vehicle Number:</span>
+                            <span class="detail-value">${ocrData.deliveryDetails?.vehicleNumber || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📦 Palet:</span>
+                            <span class="detail-value">${ocrData.deliveryDetails?.palet || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💳 Invoice Discount:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.invoiceDisc || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💵 Total Item Discount:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalItemDiscount || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💸 Total Invoice Discount:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalInvoiceDiscount || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💰 Total After Discount:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalAfterDiscount || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🎁 Total Bonus:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalBonus || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📊 Total LST:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalLST || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">🧾 Total VAT Input:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalVATInput || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">💳 Total Include VAT:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalIncludeVAT || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📄 Total Invoice:</span>
+                            <span class="detail-value">${ocrData.financialDetails?.totalInvoice || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">📝 Amount in Words:</span>
+                            <span class="detail-value">${ocrData.notes?.byLetter || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
             </div>
         </div>
     `;
     
     showCustomAlert('File Detail', detailHTML, '📋', 'html');
+}
+
+// Add to table with detail button
+function addToTable(data) {
+    const tbody = document.querySelector('#fileTableBody');
+    
+    if (!tbody) {
+        console.error('Table body not found');
+        showMessage('Error: Table tidak ditemukan', 'error');
+        return;
+    }
+    
+    const row = document.createElement('tr');
+    
+    // Format sesuai dengan struktur tabel yang ada
+    row.innerHTML = `
+        <td>${data.filename || 'OCR File'}</td>
+        <td>${new Date().toLocaleDateString()}</td>
+        <td>${data.supplier || ''}</td>
+        <td>${data.poNumber || ''}</td>
+        <td>${data.items ? data.items.length : 0} item(s)</td>
+        <td class="status-draft">draft</td>
+        <td><button class="detail-btn" data-id="${Date.now()}">📋 Detail</button></td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // Refresh all data table
+    renderAllDataTable();
+}
+
+// View detail function
+function viewDetail(poNumber) {
+    // Navigate to detail page
+    window.location.href = 'po-detail.html';
 }
 
 // Custom Modal Functions
