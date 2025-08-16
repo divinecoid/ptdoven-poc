@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PT Doven Tradeco - PO Management</title>
+    <title>PT Doven Tradeco - Faktur Pajak Management</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -65,12 +65,12 @@
         }
         .tab-btn.active, .tab-btn:hover { background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%); color: #fff; }
         .tab-content { background: rgba(0,0,0,0.4); border-radius: 15px; padding: 25px; color: white; }
-        .file-table, .po-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-        .file-table th, .file-table td, .po-table th, .po-table td {
+        .file-table, .faktur-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .file-table th, .file-table td, .faktur-table th, .faktur-table td {
             padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;
         }
-        .file-table th, .po-table th { font-weight: 600; color: rgba(255,255,255,0.8); font-size: 13px; }
-        .file-table tr:hover, .po-table tr:hover { background: rgba(255,255,255,0.05); }
+        .file-table th, .faktur-table th { font-weight: 600; color: rgba(255,255,255,0.8); font-size: 13px; }
+        .file-table tr:hover, .faktur-table tr:hover { background: rgba(255,255,255,0.05); }
         .detail-btn { 
             background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%); 
             color: white; 
@@ -593,19 +593,6 @@
             transform: scale(1.1);
         }
 
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; position: relative; height: auto; }
-            .main-content { margin-left: 0; }
-            .upload-buttons {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .upload-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
         /* Upload Dialog */
         .upload-dialog {
             position: fixed;
@@ -681,29 +668,17 @@
             justify-content: flex-end;
         }
 
-        /* Button Styles */
-        .btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; position: relative; height: auto; }
+            .main-content { margin-left: 0; }
+            .upload-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .upload-btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -719,9 +694,9 @@
                 <li><a href="dashboard.html"><i>📊</i> Dashboard</a></li>
                 <li><a href="invoices.html"><i>📄</i> Invoices</a></li>
                 <li><a href="bank.html"><i>🏦</i> Bank</a></li>
-                <li><a href="po.html" class="active"><i>📋</i> PO</a></li>
+                <li><a href="po.html"><i>📋</i> PO</a></li>
                 <li><a href="lpb.html"><i>📦</i> LPB</a></li>
-                <li><a href="faktur-pajak.html"><i>🧾</i> Faktur Pajak</a></li>
+                <li><a href="faktur-pajak.html" class="active"><i>🧾</i> Faktur Pajak</a></li>
                 <li><a href="tanda-tukar-faktur.html"><i>🔄</i> Tanda Tukar Faktur</a></li>
                 <li><a href="#" onclick="logout()"><i>🚪</i> Logout</a></li>
             </ul>
@@ -729,7 +704,7 @@
         <!-- Main Content -->
         <div class="main-content">
             <div class="header">
-                <h1>PO Management</h1>
+                <h1>Faktur Pajak Management</h1>
                 <div class="user-info">
                     <div class="user-avatar">A</div>
                     <span>Admin User</span>
@@ -737,11 +712,11 @@
             </div>
             <div class="upload-section">
                 <div class="upload-buttons">
-                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload PO (EDI/PDF)</button>
+                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload Faktur Pajak (PDF Only)</button>
                     <button class="upload-btn" id="clearDataBtn" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);"><span>🗑️</span>Clear Data (DEMO ONLY)</button>
                 </div>
                 <div style="margin-top:10px;color:rgba(255,255,255,0.7);font-size:12px;">
-                    <strong>Format yang didukung:</strong> .edi, .EDI, .pdf
+                    <strong>Format yang didukung:</strong> .pdf
                     <br><strong>OCR Support:</strong> PDF akan diproses dengan Google Generative AI
                 </div>
             </div>
@@ -756,8 +731,8 @@
                             <th>Nama File</th>
                             <th>Tanggal Upload</th>
                             <th>Supplier</th>
-                            <th>PO Number</th>
-                            <th>Total Items</th>
+                            <th>Nomor Faktur</th>
+                            <th>Total PPN</th>
                             <th>Status</th>
                             <th>Detail</th>
                         </tr>
@@ -768,24 +743,25 @@
                 </table>
             </div>
             <div class="tab-content hidden" id="tabContentAllData">
-                <table class="po-table" id="allDataTable">
+                <table class="faktur-table" id="allDataTable">
                     <thead>
                         <tr>
                             <th>Nama File</th>
-                            <th>PO Number</th>
+                            <th>Nomor Faktur</th>
                             <th>Supplier</th>
+                            <th>NPWP</th>
                             <th>Item Code</th>
-                            <th>Group Digit</th>
                             <th>Description</th>
                             <th>Quantity</th>
                             <th>Unit Price</th>
                             <th>Total</th>
+                            <th>PPN</th>
                             <th>Status</th>
                             <th class="col-aksi">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="allDataBody">
-                        <!-- Semua data PO -->
+                        <!-- Semua data Faktur Pajak -->
                     </tbody>
                 </table>
             </div>
@@ -816,20 +792,20 @@
     <div class="upload-dialog" id="uploadDialog">
         <div class="upload-modal">
             <div class="modal-header">
-                <h3 class="modal-title">Upload PO</h3>
+                <h3 class="modal-title">Upload Faktur Pajak</h3>
                 <button class="close-btn" onclick="closeUploadDialog()">&times;</button>
             </div>
             
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📄</div>
                 <div class="upload-text">Click to select or drag files here</div>
-                <div class="upload-hint">Supports EDI and PDF files</div>
+                <div class="upload-hint">Supports PDF files only</div>
             </div>
-            <input type="file" class="file-input" id="fileInput" accept=".edi,.EDI,.pdf" multiple>
+            <input type="file" class="file-input" id="fileInput" accept=".pdf" multiple>
             
             <div class="upload-actions">
                 <button class="btn btn-secondary" onclick="closeUploadDialog()">Cancel</button>
-                <button class="btn btn-primary" onclick="uploadFiles()" id="uploadFilesBtn" disabled>Upload</button>
+                <button class="btn btn-primary" id="uploadFilesBtn" disabled>Upload</button>
             </div>
         </div>
     </div>
@@ -843,6 +819,6 @@
         <button class="snackbar-close" onclick="closeSnackbar()">&times;</button>
     </div>
 
-    <script src="../logic/po.js"></script>
+    <script src="../logic/faktur-pajak.js"></script>
 </body>
 </html> 

@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { processPOWithOCR } = require('./logic/ocr');
+const { processFakturPajakWithOCR } = require('./logic/faktur-pajak');
 
 // Keep a global reference of the window object
 let mainWindow;
@@ -63,10 +64,10 @@ ipcMain.handle('process-ocr', async (event, filePath) => {
     }
 });
 
-// IPC Handler for file upload and OCR
+// IPC Handler for file upload and OCR (PO)
 ipcMain.handle('upload-and-ocr', async (event, fileData) => {
     try {
-        console.log('Received file upload for OCR processing');
+        console.log('Received file upload for PO OCR processing');
         
         // Validate file data
         if (!fileData || !fileData.name || !fileData.data) {
@@ -106,6 +107,57 @@ ipcMain.handle('upload-and-ocr', async (event, fileData) => {
         
     } catch (error) {
         console.error('OCR processing error:', error);
+        return {
+            success: false,
+            error: error.message,
+            data: null
+        };
+    }
+});
+
+// IPC Handler for file upload and OCR (Faktur Pajak)
+ipcMain.handle('upload-and-ocr-faktur-pajak', async (event, fileData) => {
+    try {
+        console.log('Received file upload for Faktur Pajak OCR processing');
+        
+        // Validate file data
+        if (!fileData || !fileData.name || !fileData.data) {
+            throw new Error('Invalid file data received');
+        }
+        
+        // Create temporary file
+        const tempDir = path.join(app.getPath('temp'), 'ptdoven-ocr');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const tempFilePath = path.join(tempDir, `upload_fp_${Date.now()}_${fileData.name}`);
+        
+        // Write file data to temp file
+        const buffer = Buffer.from(fileData.data);
+        fs.writeFileSync(tempFilePath, buffer);
+        
+        console.log('Temporary file created for Faktur Pajak:', tempFilePath);
+        
+        // Process OCR
+        const result = await processFakturPajakWithOCR(tempFilePath);
+        
+        // Clean up temp file
+        try {
+            fs.unlinkSync(tempFilePath);
+            console.log('Temporary file cleaned up');
+        } catch (cleanupError) {
+            console.warn('Failed to cleanup temp file:', cleanupError);
+        }
+        
+        return {
+            success: true,
+            data: result.data,
+            originalText: result.originalText
+        };
+        
+    } catch (error) {
+        console.error('Faktur Pajak OCR processing error:', error);
         return {
             success: false,
             error: error.message,

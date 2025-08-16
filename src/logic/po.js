@@ -30,10 +30,7 @@ function setPOData(data) {
 }
 
 // UI Elements
-const uploadBtn = document.getElementById('uploadBtn');
 const clearDataBtn = document.getElementById('clearDataBtn');
-const fileInput = document.getElementById('poFileInput');
-const uploadFileName = document.getElementById('uploadFileName');
 const tabPerFile = document.getElementById('tabPerFile');
 const tabAllData = document.getElementById('tabAllData');
 const tabContentPerFile = document.getElementById('tabContentPerFile');
@@ -58,79 +55,131 @@ function showTab(tab) {
 tabPerFile.onclick = () => showTab('perfile');
 tabAllData.onclick = () => showTab('alldata');
 
-// Upload logic with OCR support
-uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// Initialize upload modal functionality
+let selectedFiles = [];
+
+function openUploadDialog() {
+    console.log('openUploadDialog called');
+    const uploadDialog = document.getElementById('uploadDialog');
+    if (uploadDialog) {
+        uploadDialog.classList.add('active');
+        selectedFiles = [];
+        updateUploadButton();
+        updateUploadArea();
+        console.log('Upload dialog opened successfully');
+    } else {
+        console.error('Upload dialog element not found');
+    }
+}
+
+function closeUploadDialog() {
+    document.getElementById('uploadDialog').classList.remove('active');
+    selectedFiles = [];
+    document.getElementById('fileInput').value = '';
+    updateUploadButton();
+    updateUploadArea();
+}
+
+function triggerFileInput() {
+    document.getElementById('fileInput').click();
+}
+
+function updateUploadButton() {
+    const uploadBtn = document.getElementById('uploadFilesBtn');
+    uploadBtn.disabled = selectedFiles.length === 0;
+}
+
+function updateUploadArea() {
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadText = uploadArea.querySelector('.upload-text');
+    const uploadHint = uploadArea.querySelector('.upload-hint');
     
-    // Validate file extension
-    const fileExtension = file.name.toLowerCase().split('.').pop();
-    const allowedExtensions = ['csv', 'xlsx', 'xls', 'edi', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-    
-    if (!allowedExtensions.includes(fileExtension)) {
-        showSnackbar('❌ Format file tidak didukung! Gunakan .csv, .xlsx, .xls, .edi, .pdf, atau gambar (.jpg, .png, dll)', 'error');
-        fileInput.value = '';
+    if (selectedFiles.length > 0) {
+        uploadText.textContent = `${selectedFiles.length} file(s) selected`;
+        uploadHint.textContent = selectedFiles.map(f => f.name).join(', ');
+    } else {
+        uploadText.textContent = 'Click to select or drag files here';
+        uploadHint.textContent = 'Supports EDI and PDF files';
+    }
+}
+
+async function uploadFiles() {
+    if (selectedFiles.length === 0) {
+        showSnackbar('Please select files to upload', 'error');
         return;
     }
-    
-    uploadFileName.textContent = file.name;
-    
-    try {
-        let parsed = null;
-        
-        // Check if it's an OCR-supported file type
-        if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension)) {
-            // Show processing message
-            showSnackbar('🔄 Memproses OCR... Mohon tunggu', 'info');
-            
-            // Process with OCR
-            parsed = await processFileWithOCR(file);
-        } else {
-            // Process with existing methods
-            const reader = new FileReader();
-            parsed = await new Promise((resolve, reject) => {
-                reader.onload = function(ev) {
-                    const text = ev.target.result;
-                    let result = null;
-                    
-                    // Check file extension to determine parsing method
-                    if (fileExtension === 'edi') {
-                        result = parsePOEDI(text);
-                        if (!result) {
-                            reject(new Error('Format EDI tidak valid! Pastikan file berisi POHDR dan LIN records.'));
-                            return;
-                        }
-                    } else {
-                        result = parsePOCSV(text);
-                        if (!result) {
-                            reject(new Error('Format CSV tidak valid! Pastikan file berisi kolom yang benar.'));
-                            return;
-                        }
-                    }
-                    resolve(result);
-                };
-                reader.onerror = () => reject(new Error('Gagal membaca file'));
-                reader.readAsText(file);
-            });
-        }
-        
-        if (parsed) {
-            savePOFile(file.name, parsed);
-            renderFileTable();
-            renderAllDataTable();
-            uploadFileName.textContent = '';
-            fileInput.value = '';
-            showSnackbar(`Upload & parsing ${fileExtension.toUpperCase()} berhasil!`, 'success');
-        }
-        
-    } catch (error) {
-        console.error('Upload error:', error);
-        showSnackbar(`❌ Error: ${error.message}`, 'error');
-        uploadFileName.textContent = '';
-        fileInput.value = '';
+
+    // Validate files
+    const supportedFormats = ['edi', 'pdf'];
+    const invalidFiles = selectedFiles.filter(file => {
+        const extension = file.name.split('.').pop().toLowerCase();
+        return !supportedFormats.includes(extension);
+    });
+
+    if (invalidFiles.length > 0) {
+        showSnackbar(`Unsupported file format(s): ${invalidFiles.map(f => f.name).join(', ')}. Only EDI and PDF files are supported.`, 'error');
+        return;
     }
-};
+
+    // Process files
+    showSnackbar(`Processing ${selectedFiles.length} file(s)...`, 'info');
+    
+    for (const file of selectedFiles) {
+        const fileExtension = file.name.toLowerCase().split('.').pop();
+        
+        try {
+            let parsed = null;
+            
+            // Check if it's an OCR-supported file type
+            if (['pdf'].includes(fileExtension)) {
+                // Show processing message
+                showSnackbar('🔄 Memproses OCR... Mohon tunggu', 'info');
+                
+                // Process with OCR
+                parsed = await processFileWithOCR(file);
+            } else {
+                // Process with existing methods
+                const reader = new FileReader();
+                parsed = await new Promise((resolve, reject) => {
+                    reader.onload = function(ev) {
+                        const text = ev.target.result;
+                        let result = null;
+                        
+                        // Check file extension to determine parsing method
+                        if (fileExtension === 'edi') {
+                            result = parsePOEDI(text);
+                            if (!result) {
+                                reject(new Error('Format EDI tidak valid! Pastikan file berisi POHDR dan LIN records.'));
+                                return;
+                            }
+                        } else {
+                            result = parsePOCSV(text);
+                            if (!result) {
+                                reject(new Error('Format CSV tidak valid! Pastikan file berisi kolom yang benar.'));
+                                return;
+                            }
+                        }
+                        resolve(result);
+                    };
+                    reader.onerror = () => reject(new Error('Gagal membaca file'));
+                    reader.readAsText(file);
+                });
+            }
+            
+                        if (parsed) {
+                savePOFile(file.name, parsed);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            showSnackbar(`Error: ${error.message}`, 'error');
+        }
+    }
+    
+    renderFileTable();
+    renderAllDataTable();
+    closeUploadDialog();
+            showSnackbar(`PO file(s) processed successfully!`, 'success');
+}
 
 // Format currency function
 function formatCurrency(amount) {
@@ -388,8 +437,12 @@ function parsePOEDI(text) {
             const linFields = line.split('|');
             if (linFields.length >= 15) {
                 // LIN|TAS BELANJA|4|0|4324992|12345678910|1000|BAG|250|0.00%||1000|0|1000000|0|0|0|1.00%
+                const itemCode = linFields[4] || ''; // 4324992
+                const groupDigit = extractGroupDigit(itemCode); // Extract group digit from item code
+                
                 items.push({
-                    itemCode: linFields[4] || '', // 4324992
+                    itemCode: itemCode,
+                    groupDigit: groupDigit, // Add group digit
                     description: linFields[1] || '', // TAS BELANJA
                     quantity: linFields[2] || '', // 4
                     unitPrice: linFields[6] || '', // 1000
@@ -421,6 +474,36 @@ function parsePOEDI(text) {
         totalAmount,
         items 
     };
+}
+
+// Helper function to extract group digit from item code
+function extractGroupDigit(itemCode) {
+    if (!itemCode || typeof itemCode !== 'string') return '';
+    
+    // Remove any non-digit characters and get the first digit
+    const digits = itemCode.replace(/\D/g, '');
+    if (digits.length > 0) {
+        return digits.charAt(0);
+    }
+    
+    return '';
+}
+
+// Helper function to format number with grouping digits
+function formatNumberWithGrouping(number) {
+    if (!number || number === '' || number === null || number === undefined) {
+        return '0';
+    }
+    
+    // Convert to string and remove any non-numeric characters except decimal point
+    let numStr = number.toString().replace(/[^\d.-]/g, '');
+    
+    // If it's a valid number, format it with grouping
+    if (!isNaN(parseFloat(numStr))) {
+        return parseFloat(numStr).toLocaleString('id-ID');
+    }
+    
+    return number.toString();
 }
 
 // Helper untuk parsing baris CSV (handle koma di dalam tanda kutip)
@@ -463,7 +546,8 @@ function renderFileTable() {
         const tr = document.createElement('tr');
         const poDateInfo = file.poDate ? ` (${file.poDate})` : '';
         const deliveryInfo = file.deliveryDate ? ` (${file.deliveryDate})` : '';
-        const totalInfo = file.totalAmount ? ` - Total: ${file.totalAmount}` : '';
+        const formattedTotal = file.totalAmount ? formatNumberWithGrouping(file.totalAmount) : '';
+        const totalInfo = formattedTotal ? ` - Total: ${formattedTotal}` : '';
         tr.innerHTML = `
             <td>${file.name}</td>
             <td>${file.uploadDate}</td>
@@ -488,15 +572,17 @@ function renderAllDataTable() {
             const statusText = item.status || 'draft';
             const unitInfo = item.unit ? ` (${item.unit})` : '';
             const discountInfo = item.discount ? ` ${item.discount}` : '';
+            const groupDigitDisplay = item.groupDigit ? `<span style="background: #4a90e2; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${item.groupDigit}</span>` : '-';
             tr.innerHTML = `
                 <td>${file.name}</td>
                 <td>${file.poNumber}</td>
                 <td>${file.supplier}</td>
                 <td>${item.itemCode}</td>
+                <td>${groupDigitDisplay}</td>
                 <td class="col-keterangan">${item.description}${unitInfo}</td>
                 <td>${item.quantity}</td>
                 <td>${item.unitPrice}${discountInfo}</td>
-                <td>${item.total}</td>
+                <td>${formatNumberWithGrouping(item.total)}</td>
                 <td class="${statusClass}">${statusText}</td>
                 <td class="col-aksi">
                     <button class="action-btn confirm" onclick="updateItemStatus(${file.id}, ${itemIndex}, 'confirmed')">✓ Confirm</button>
@@ -524,6 +610,29 @@ function updateItemStatus(fileId, itemIndex, newStatus) {
     
     showSnackbar(`Status berhasil diubah menjadi: ${newStatus}`, 'success');
 }
+
+// Function to add group digit to existing data
+function addGroupDigitToExistingData() {
+    const data = getPOData();
+    let hasChanges = false;
+    
+    data.files.forEach(file => {
+        file.items.forEach(item => {
+            if (!item.groupDigit && item.itemCode) {
+                item.groupDigit = extractGroupDigit(item.itemCode);
+                hasChanges = true;
+            }
+        });
+    });
+    
+    if (hasChanges) {
+        setPOData(data);
+        console.log('Group digit added to existing data');
+    }
+}
+
+// Add group digit to existing data
+addGroupDigitToExistingData();
 
 // Initial render
 renderFileTable();
@@ -599,7 +708,7 @@ function showFileDetail(fileId) {
                         ${file.totalAmount ? `
                         <div class="detail-item">
                             <span class="detail-label">💰 Total Amount:</span>
-                            <span class="detail-value">${file.totalAmount}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(file.totalAmount)}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -626,8 +735,14 @@ function showFileDetail(fileId) {
                                     </div>
                                     <div class="item-detail-row">
                                         <span class="detail-label">Total:</span>
-                                        <span class="detail-value">${item.total}</span>
+                                        <span class="detail-value">${formatNumberWithGrouping(item.total)}</span>
                                     </div>
+                                    ${item.groupDigit ? `
+                                    <div class="item-detail-row">
+                                        <span class="detail-label">Group:</span>
+                                        <span class="detail-value" style="background: #4a90e2; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${item.groupDigit}</span>
+                                    </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -652,7 +767,7 @@ function showFileDetail(fileId) {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💰 Total Purchase Price:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalPurchasePrice || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalPurchasePrice) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">📝 Notes:</span>
@@ -684,39 +799,39 @@ function showFileDetail(fileId) {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💳 Invoice Discount:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.invoiceDisc || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.invoiceDisc) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💵 Total Item Discount:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalItemDiscount || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalItemDiscount) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💸 Total Invoice Discount:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalInvoiceDiscount || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalInvoiceDiscount) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💰 Total After Discount:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalAfterDiscount || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalAfterDiscount) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">🎁 Total Bonus:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalBonus || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalBonus) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">📊 Total LST:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalLST || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalLST) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">🧾 Total VAT Input:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalVATInput || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalVATInput) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">💳 Total Include VAT:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalIncludeVAT || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalIncludeVAT) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">📄 Total Invoice:</span>
-                            <span class="detail-value">${ocrData.financialDetails?.totalInvoice || 'N/A'}</span>
+                            <span class="detail-value">${formatNumberWithGrouping(ocrData.financialDetails?.totalInvoice) || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">📝 Amount in Words:</span>
@@ -942,4 +1057,79 @@ function clearSessionData() {
     } catch (error) {
         console.log('Session cleanup completed');
     }
-} 
+}
+
+// Setup upload modal event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up upload button event listener
+    const uploadBtn = document.getElementById('uploadBtn');
+    console.log('Upload button element:', uploadBtn);
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            console.log('Upload button clicked');
+            openUploadDialog();
+        });
+        console.log('Upload button event listener added successfully');
+    } else {
+        console.error('Upload button element not found');
+    }
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    console.log('Upload area element:', uploadArea);
+    console.log('File input element:', fileInput);
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        selectedFiles = Array.from(e.target.files);
+        updateUploadButton();
+        updateUploadArea();
+    });
+
+    // Drag and drop events
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = Array.from(e.dataTransfer.files);
+        selectedFiles = files;
+        fileInput.files = e.dataTransfer.files;
+        updateUploadButton();
+        updateUploadArea();
+    });
+
+    // Click to select files
+    uploadArea.addEventListener('click', (e) => {
+        console.log('Upload area clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('File input element:', fileInput);
+        if (fileInput) {
+            console.log('File input properties:', {
+                type: fileInput.type,
+                accept: fileInput.accept,
+                multiple: fileInput.multiple,
+                disabled: fileInput.disabled,
+                style: fileInput.style.display
+            });
+            try {
+                fileInput.click();
+                console.log('File input clicked successfully');
+            } catch (error) {
+                console.error('Error clicking file input:', error);
+            }
+        } else {
+            console.error('File input not found');
+        }
+    });
+}); 

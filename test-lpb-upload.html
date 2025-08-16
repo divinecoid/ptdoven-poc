@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test LPB Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test LPB Upload Functionality</h1>
+        
+        <h3>Test Buttons:</h3>
+        <button class="test-button" onclick="testMainUploadBtn()">Test Main Upload Button</button>
+        <button class="test-button" onclick="testModalUploadBtn()">Test Modal Upload Button</button>
+        <button class="test-button" onclick="testFileInput()">Test File Input</button>
+        <button class="test-button" onclick="clearLog()">Clear Log</button>
+        
+        <h3>Console Log:</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            originalLog(message);
+        }
+        
+        function logError(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ERROR: ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            originalError(message);
+        }
+        
+        console.log = log;
+        console.error = logError;
+        
+        function testMainUploadBtn() {
+            log('Testing main upload button...');
+            const btn = document.getElementById('mainUploadBtn');
+            if (btn) {
+                log('Main upload button found');
+                log('Button text: ' + btn.textContent);
+                log('Button disabled: ' + btn.disabled);
+                log('Button onclick: ' + btn.onclick);
+            } else {
+                logError('Main upload button not found!');
+            }
+        }
+        
+        function testModalUploadBtn() {
+            log('Testing modal upload button...');
+            const btn = document.getElementById('modalUploadBtn');
+            if (btn) {
+                log('Modal upload button found');
+                log('Button text: ' + btn.textContent);
+                log('Button disabled: ' + btn.disabled);
+                log('Button onclick: ' + btn.onclick);
+            } else {
+                logError('Modal upload button not found!');
+            }
+        }
+        
+        function testFileInput() {
+            log('Testing file input...');
+            const input = document.getElementById('fileInput');
+            if (input) {
+                log('File input found');
+                log('Input type: ' + input.type);
+                log('Input accept: ' + input.accept);
+                log('Input multiple: ' + input.multiple);
+                log('Input disabled: ' + input.disabled);
+                log('Input style display: ' + input.style.display);
+            } else {
+                logError('File input not found!');
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        // Test on page load
+        window.addEventListener('load', function() {
+            log('Page loaded, testing elements...');
+            testMainUploadBtn();
+            testModalUploadBtn();
+            testFileInput();
+        });
+    </script>
+</body>
+</html> 

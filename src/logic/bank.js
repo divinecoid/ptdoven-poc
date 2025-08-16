@@ -29,36 +29,21 @@ function setBankData(data) {
     localStorage.setItem('bankUploads', JSON.stringify(data));
 }
 
-// UI Elements
-const uploadBtn = document.getElementById('uploadBtn');
-const clearDataBtn = document.getElementById('clearDataBtn');
-const fileInput = document.getElementById('bankFileInput');
-const uploadFileName = document.getElementById('uploadFileName');
-const tabPerFile = document.getElementById('tabPerFile');
-const tabAllData = document.getElementById('tabAllData');
-const tabContentPerFile = document.getElementById('tabContentPerFile');
-const tabContentAllData = document.getElementById('tabContentAllData');
-const fileTableBody = document.getElementById('fileTableBody');
-const detailModalOverlay = document.getElementById('detailModalOverlay');
-const detailModal = document.getElementById('detailModal');
-const detailFileName = document.getElementById('detailFileName');
-const detailRekening = document.getElementById('detailRekening');
-const detailNama = document.getElementById('detailNama');
-const detailPeriode = document.getElementById('detailPeriode');
-const mutasiDetailBody = document.getElementById('mutasiDetailBody');
-const allDataBody = document.getElementById('allDataBody');
+// UI Elements - will be initialized in DOMContentLoaded
+let clearDataBtn, tabPerFile, tabAllData, tabContentPerFile, tabContentAllData;
+let fileTableBody, detailModalOverlay, detailModal, detailFileName;
+let detailRekening, detailNama, detailPeriode, mutasiDetailBody, allDataBody;
 
 // Detail pagination elements
-const detailItemsPerPage = document.getElementById('detailItemsPerPage');
-const detailPaginationInfo = document.getElementById('detailPaginationInfo');
-const detailPrevBtn = document.getElementById('detailPrevBtn');
-const detailNextBtn = document.getElementById('detailNextBtn');
-const detailPaginationPages = document.getElementById('detailPaginationPages');
+let detailItemsPerPage, detailPaginationInfo, detailPrevBtn, detailNextBtn, detailPaginationPages;
 
 // Detail pagination state
 let detailCurrentPage = 1;
 let detailItemsPerPageValue = 10;
 let detailCurrentFileId = null;
+
+// Custom modal callback
+let modalCallback = null;
 
 // Tab logic
 function showTab(tab) {
@@ -74,62 +59,275 @@ function showTab(tab) {
         tabContentAllData.classList.remove('hidden');
     }
 }
-tabPerFile.onclick = () => showTab('perfile');
-tabAllData.onclick = () => showTab('alldata');
 
-// Upload logic
-uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    uploadFileName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        const text = ev.target.result;
-        const parsed = parseBankCSV(text);
-        if (!parsed) {
-            showSnackbar('❌ Format file tidak dikenali!', 'error');
-            return;
+// Upload logic - will be set up in DOMContentLoaded
+
+// Initialize upload modal functionality
+let selectedFiles = [];
+
+// Global function for onclick handler
+function openUploadDialog() {
+    console.log('Global openUploadDialog() called');
+    const uploadDialog = document.getElementById('uploadDialog');
+    if (uploadDialog) {
+        uploadDialog.classList.add('active');
+        selectedFiles = [];
+        updateUploadButton();
+        updateUploadArea();
+        console.log('✅ Upload dialog opened successfully');
+    } else {
+        console.error('❌ Upload dialog element not found');
+    }
+}
+
+// Global function for onclick handler
+function closeUploadDialog() {
+    console.log('Global closeUploadDialog() called');
+    const uploadDialog = document.getElementById('uploadDialog');
+    if (uploadDialog) {
+        uploadDialog.classList.remove('active');
+        selectedFiles = [];
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.value = '';
+        updateUploadButton();
+        updateUploadArea();
+        console.log('✅ Upload dialog closed successfully');
+    } else {
+        console.error('❌ Upload dialog element not found');
+    }
+}
+
+// Global function for onclick handler
+function triggerFileInput() {
+    console.log('Global triggerFileInput() called');
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        console.log('File input element found, clicking...');
+        try {
+            fileInput.click();
+            console.log('✅ File input clicked successfully');
+        } catch (error) {
+            console.error('❌ Error clicking file input:', error);
         }
-        saveBankFile(file.name, parsed);
+    } else {
+        console.error('❌ File input element not found');
+    }
+}
+
+function updateUploadButton() {
+    const uploadBtn = document.getElementById('uploadFilesBtn');
+    uploadBtn.disabled = selectedFiles.length === 0;
+}
+
+function updateUploadArea() {
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadText = uploadArea.querySelector('.upload-text');
+    const uploadHint = uploadArea.querySelector('.upload-hint');
+    
+    if (selectedFiles.length > 0) {
+        uploadText.textContent = `${selectedFiles.length} file(s) selected`;
+        uploadHint.textContent = selectedFiles.map(f => f.name).join(', ');
+    } else {
+        uploadText.textContent = 'Click to select or drag files here';
+        uploadHint.textContent = 'Supports CSV files only';
+    }
+}
+
+// Global function for onclick handler
+function uploadFiles() {
+    console.log('Global uploadFiles() called');
+    if (selectedFiles.length === 0) {
+        showSnackbar('❌', 'Please select files to upload');
+        return;
+    }
+
+    // Validate files
+    const supportedFormats = ['csv'];
+    const invalidFiles = selectedFiles.filter(file => {
+        const extension = file.name.split('.').pop().toLowerCase();
+        return !supportedFormats.includes(extension);
+    });
+
+    if (invalidFiles.length > 0) {
+        showSnackbar('❌', `Unsupported file format(s): ${invalidFiles.map(f => f.name).join(', ')}. Only CSV files are supported.`);
+        return;
+    }
+
+    // Process files
+    showSnackbar('⏳', `Processing ${selectedFiles.length} file(s)...`);
+    
+    setTimeout(() => {
+        selectedFiles.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const text = ev.target.result;
+                const parsed = parseBankCSV(text);
+                if (!parsed) {
+                    showSnackbar('❌', `Format file tidak dikenali: ${file.name}`);
+                    return;
+                }
+                saveBankFile(file.name, parsed);
+            };
+            reader.readAsText(file);
+        });
+        
         renderFileTable();
         renderAllDataTable();
-        uploadFileName.textContent = '';
-        fileInput.value = '';
-        showSnackbar('Upload & parsing berhasil!', 'success');
-    };
-    reader.readAsText(file);
-};
+        closeUploadDialog();
+        showSnackbar('✅', `${selectedFiles.length} Bank file(s) processed successfully!`);
+    }, 1000);
+}
 
-// Clear data logic
-clearDataBtn.onclick = async () => {
-    try {
-        const confirmed = await showCustomConfirm(
-            '🗑️ Hapus Data',
-            'Yakin ingin menghapus semua data upload?',
-            '⚠️'
-        );
-        
-        if (confirmed) {
-            localStorage.removeItem('bankUploads');
-            renderFileTable();
-            renderAllDataTable();
-            closeDetailModal();
-            showSnackbar('✅ Semua data berhasil dihapus!', 'success');
-        }
-    } catch (error) {
-        console.error('Error with custom modal, using fallback:', error);
-        // Fallback to browser confirm
-        const confirmed = confirm('Yakin ingin menghapus semua data upload?');
-        if (confirmed) {
-            localStorage.removeItem('bankUploads');
-            renderFileTable();
-            renderAllDataTable();
-            closeDetailModal();
-            showSnackbar('✅ Semua data berhasil dihapus!', 'success');
-        }
+// Setup upload modal event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize UI elements
+    clearDataBtn = document.getElementById('clearDataBtn');
+    tabPerFile = document.getElementById('tabPerFile');
+    tabAllData = document.getElementById('tabAllData');
+    tabContentPerFile = document.getElementById('tabContentPerFile');
+    tabContentAllData = document.getElementById('tabContentAllData');
+    fileTableBody = document.getElementById('fileTableBody');
+    detailModalOverlay = document.getElementById('detailModalOverlay');
+    detailModal = document.getElementById('detailModal');
+    detailFileName = document.getElementById('detailFileName');
+    detailRekening = document.getElementById('detailRekening');
+    detailNama = document.getElementById('detailNama');
+    detailPeriode = document.getElementById('detailPeriode');
+    mutasiDetailBody = document.getElementById('mutasiDetailBody');
+    allDataBody = document.getElementById('allDataBody');
+
+    // Initialize pagination elements
+    detailItemsPerPage = document.getElementById('detailItemsPerPage');
+    detailPaginationInfo = document.getElementById('detailPaginationInfo');
+    detailPrevBtn = document.getElementById('detailPrevBtn');
+    detailNextBtn = document.getElementById('detailNextBtn');
+    detailPaginationPages = document.getElementById('detailPaginationPages');
+
+    // Set up tab event listeners
+    if (tabPerFile) tabPerFile.onclick = () => showTab('perfile');
+    if (tabAllData) tabAllData.onclick = () => showTab('alldata');
+
+    // Set up clear data button event listener
+    if (clearDataBtn) {
+        clearDataBtn.onclick = async () => {
+            console.log('Clear data button clicked');
+            try {
+                const confirmed = await showCustomConfirm(
+                    '🗑️ Hapus Data',
+                    'Yakin ingin menghapus semua data upload?\n\nTindakan ini tidak dapat dibatalkan.',
+                    '⚠️'
+                );
+                
+                console.log('Clear data confirmation result:', confirmed);
+                
+                if (confirmed) {
+                    console.log('User confirmed clear data, proceeding...');
+                    localStorage.removeItem('bankUploads');
+                    renderFileTable();
+                    renderAllDataTable();
+                    closeDetailModal();
+                    showSnackbar('Semua data berhasil dihapus!', 'success');
+                    console.log('✅ Bank data cleared successfully');
+                } else {
+                    console.log('User cancelled clear data');
+                }
+            } catch (error) {
+                console.error('❌ Error with custom modal:', error);
+                showSnackbar('Terjadi kesalahan saat menampilkan dialog konfirmasi', 'error');
+            }
+        };
     }
-};
+
+    // Set up upload button event listener
+    const uploadBtn = document.getElementById('uploadBtn');
+    console.log('Upload button element:', uploadBtn);
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            console.log('Upload button clicked');
+            openUploadDialog();
+        });
+        console.log('Upload button event listener added successfully');
+    } else {
+        console.error('Upload button element not found');
+    }
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    console.log('Upload area element:', uploadArea);
+    console.log('File input element:', fileInput);
+
+    // File input change
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            selectedFiles = Array.from(e.target.files);
+            updateUploadButton();
+            updateUploadArea();
+        });
+    }
+
+    // Drag and drop events
+    if (uploadArea) {
+        console.log('✅ Upload area found, setting up event listeners');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = Array.from(e.dataTransfer.files);
+            selectedFiles = files;
+            if (fileInput) fileInput.files = e.dataTransfer.files;
+            updateUploadButton();
+            updateUploadArea();
+        });
+
+        // Click to select files
+        uploadArea.addEventListener('click', (e) => {
+            console.log('🖱️ Upload area clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔍 File input element:', fileInput);
+            if (fileInput) {
+                console.log('📋 File input properties:', {
+                    type: fileInput.type,
+                    accept: fileInput.accept,
+                    multiple: fileInput.multiple,
+                    disabled: fileInput.disabled,
+                    style: fileInput.style.display
+                });
+                try {
+                    console.log('🚀 Attempting to click file input...');
+                    fileInput.click();
+                    console.log('✅ File input clicked successfully');
+                } catch (error) {
+                    console.error('❌ Error clicking file input:', error);
+                }
+            } else {
+                console.error('❌ File input not found');
+            }
+        });
+        
+        console.log('✅ Upload area event listeners set up successfully');
+    } else {
+        console.error('❌ Upload area not found');
+    }
+
+    // Initial render
+    renderFileTable();
+    renderAllDataTable();
+    showTab('perfile');
+});
+
+// Clear data logic - will be set up in DOMContentLoaded
 
 // CSV Parsing sesuai contoh
 function parseBankCSV(text) {
@@ -241,9 +439,16 @@ function showFileDetail(btn) {
     detailModalOverlay.classList.add('show');
 }
 
-// Close detail modal
+// Global function for onclick handler
 function closeDetailModal() {
-    detailModalOverlay.classList.remove('show');
+    console.log('Global closeDetailModal() called');
+    if (detailModalOverlay) {
+        detailModalOverlay.classList.remove('show');
+        detailCurrentPage = 1;
+        console.log('✅ Detail modal closed successfully');
+    } else {
+        console.error('❌ Detail modal overlay element not found');
+    }
 }
 
 // Render semua data mutasi (flat)
@@ -275,17 +480,21 @@ function renderAllDataTable() {
     });
 }
 
-// Update status mutasi
+// Global function for onclick handler
 function updateMutasiStatus(fileId, mutasiIndex, newStatus) {
+    console.log(`Global updateMutasiStatus() called: fileId=${fileId}, mutasiIndex=${mutasiIndex}, newStatus=${newStatus}`);
     const data = getBankData();
     const file = data.files.find(f => f.id == fileId);
-    if (!file || !file.mutasi[mutasiIndex]) return;
+    if (!file || !file.mutasi[mutasiIndex]) {
+        console.error('❌ File or mutasi not found');
+        return;
+    }
     
     file.mutasi[mutasiIndex].status = newStatus;
     setBankData(data);
     
     // Check if detail modal is currently open
-    const isDetailOpen = detailModalOverlay.classList.contains('show');
+    const isDetailOpen = detailModalOverlay && detailModalOverlay.classList.contains('show');
     
     // Refresh tables
     renderFileTable();
@@ -297,6 +506,7 @@ function updateMutasiStatus(fileId, mutasiIndex, newStatus) {
     }
     
     showSnackbar(`Status berhasil diubah menjadi: ${newStatus}`, 'success');
+    console.log('✅ Mutasi status updated successfully');
 }
 
 // Render detail table with pagination
@@ -457,7 +667,6 @@ detailItemsPerPage.addEventListener('change', (e) => {
 });
 
 // Custom Modal Functions
-let modalCallback = null;
 
 function showCustomModal(title, message, icon = '❓', type = 'confirm') {
     const modal = document.getElementById('customModalOverlay');

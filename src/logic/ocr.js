@@ -61,20 +61,18 @@ try {
     };
 }
 
-// OCR Processing Function
+// OCR Processing Function - Only PDF supported
 async function processOCRForPO(filePath, fileType) {
     try {
         console.log(`Starting OCR processing for: ${filePath}`);
         
         let fileContent = '';
         
-        // Read file content based on type
+        // Read file content - only PDF supported
         if (fileType === 'pdf') {
             fileContent = await extractTextFromPDF(filePath);
-        } else if (fileType === 'image') {
-            fileContent = await extractTextFromImage(filePath);
         } else {
-            throw new Error(`Unsupported file type: ${fileType}`);
+            throw new Error(`Unsupported file type: ${fileType}. Only PDF files are supported for OCR processing.`);
         }
         
         if (!fileContent || fileContent.trim().length === 0) {
@@ -1572,18 +1570,15 @@ function getMimeType(filePath) {
     return mimeTypes[ext] || 'image/jpeg';
 }
 
-// Validate file type
+// Validate file type - Only PDF supported for OCR
 function validateFileType(filePath) {
     const ext = path.extname(filePath).toLowerCase();
-    const supportedImageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
     const supportedPdfTypes = ['.pdf'];
     
-    if (supportedImageTypes.includes(ext)) {
-        return 'image';
-    } else if (supportedPdfTypes.includes(ext)) {
+    if (supportedPdfTypes.includes(ext)) {
         return 'pdf';
     } else {
-        throw new Error(`Unsupported file type: ${ext}`);
+        throw new Error(`Unsupported file type: ${ext}. Only PDF files are supported for OCR processing.`);
     }
 }
 

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // OCR Processing
     processOCR: (filePath) => ipcRenderer.invoke('process-ocr', filePath),
     uploadAndOCR: (fileData) => ipcRenderer.invoke('upload-and-ocr', fileData),
+    uploadAndOCRFakturPajak: (fileData) => ipcRenderer.invoke('upload-and-ocr-faktur-pajak', fileData),
     
     // File handling
     selectFile: () => ipcRenderer.invoke('select-file'),

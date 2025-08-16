@@ -16,6 +16,27 @@ Aplikasi desktop untuk manajemen bisnis PT Doven Tradeco dengan fitur OCR untuk 
 - **Detail View**: Halaman detail lengkap untuk setiap PO
 - **Data Management**: Edit, delete, dan export data
 
+### 📦 LPB (Laporan Penerimaan Barang)
+- **Upload file LPB**: PDF dan gambar
+- **OCR Processing**: Ekstraksi otomatis data dari PDF dan gambar
+- **Structured Data**: Supplier, LPB Number, PO Reference, received items
+- **Detail View**: Halaman detail lengkap untuk setiap LPB
+- **Data Management**: Edit, delete, dan export data
+
+### 🧾 Faktur Pajak
+- **Upload file Faktur Pajak**: PDF dan gambar
+- **OCR Processing**: Ekstraksi otomatis data dari PDF dan gambar
+- **Structured Data**: Supplier, NPWP, Faktur Number, items, PPN
+- **Detail View**: Halaman detail lengkap untuk setiap Faktur Pajak
+- **Data Management**: Edit, delete, dan export data
+
+### 🔄 Tanda Tukar Faktur
+- **Upload file TTF**: PDF dan gambar
+- **OCR Processing**: Ekstraksi otomatis data dari PDF dan gambar
+- **Structured Data**: Supplier, TTF Number, Faktur Reference, exchange items
+- **Detail View**: Halaman detail lengkap untuk setiap Tanda Tukar Faktur
+- **Data Management**: Edit, delete, dan export data
+
 ### 💰 Invoice Management
 - Manajemen invoice dan pembayaran
 - Tracking status pembayaran
@@ -75,8 +96,17 @@ npm start
 
 ### 4. Test OCR
 ```bash
-# Test OCR functionality
+# Test PO OCR functionality
 node test-ocr-simple.js
+
+# Test LPB OCR functionality
+node test-lpb.js
+
+# Test Faktur Pajak OCR functionality
+node test-faktur-pajak.js
+
+# Test Tanda Tukar Faktur OCR functionality
+node test-tanda-tukar-faktur.js
 ```
 
 ## Penggunaan

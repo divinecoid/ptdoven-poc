@@ -613,6 +613,106 @@
                 justify-content: center;
             }
         }
+
+        /* Upload Dialog */
+        .upload-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .upload-dialog.active {
+            display: flex;
+        }
+
+        .upload-modal {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .upload-area.dragover {
+            border-color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2a5298 0%, #4a90e2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body>
@@ -628,6 +728,9 @@
                 <li><a href="invoices.html"><i>📄</i> Invoices</a></li>
                 <li><a href="bank.html" class="active"><i>🏦</i> Bank</a></li>
                 <li><a href="po.html"><i>📋</i> PO</a></li>
+                <li><a href="lpb.html"><i>📦</i> LPB</a></li>
+                <li><a href="faktur-pajak.html"><i>🧾</i> Faktur Pajak</a></li>
+                <li><a href="tanda-tukar-faktur.html"><i>🔄</i> Tanda Tukar Faktur</a></li>
                 <li><a href="#" onclick="logout()"><i>🚪</i> Logout</a></li>
             </ul>
         </div>
@@ -641,12 +744,10 @@
                 </div>
             </div>
             <div class="upload-section">
-                <input type="file" id="bankFileInput" accept=".csv" style="display:none" />
                 <div class="upload-buttons">
-                    <button class="upload-btn" id="uploadBtn"><span>📤</span>Upload CSV Bank</button>
+                    <button class="upload-btn" id="uploadBtn" onclick="openUploadDialog()"><span>📤</span>Upload CSV Bank</button>
                     <button class="upload-btn" id="clearDataBtn" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);"><span>🗑️</span>Clear Data (DEMO ONLY)</button>
                 </div>
-                <span id="uploadFileName" style="margin-top:10px;color:#fff;display:block;"></span>
             </div>
             <div class="tabs">
                 <button class="tab-btn active" id="tabPerFile">Per File</button>
@@ -708,6 +809,28 @@
             <div class="modal-actions" id="modalActions">
                 <button class="btn btn-secondary" onclick="closeCustomModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="confirmCustomModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Dialog -->
+    <div class="upload-dialog" id="uploadDialog">
+        <div class="upload-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Upload Bank CSV</h3>
+                <button class="close-btn" onclick="closeUploadDialog()">&times;</button>
+            </div>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Click to select or drag files here</div>
+                <div class="upload-hint">Supports CSV files only</div>
+                <input type="file" class="file-input" id="fileInput" accept=".csv" multiple>
+            </div>
+            
+            <div class="upload-actions">
+                <button class="btn btn-secondary" onclick="closeUploadDialog()">Cancel</button>
+                <button class="btn btn-primary" onclick="uploadFiles()" id="uploadFilesBtn" disabled>Upload</button>
             </div>
         </div>
     </div>
